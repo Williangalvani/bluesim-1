@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=2]
+[gd_scene load_steps=30 format=2]
 
 [ext_resource path="res://scripts/BlueROV2Heavy.gd" type="Script" id=1]
 [ext_resource path="res://vehicles/components/newton.tscn" type="PackedScene" id=2]
@@ -7,6 +7,7 @@
 [ext_resource path="res://vehicles/components/Metallic black.material" type="Material" id=5]
 [ext_resource path="res://vehicles/components/ping360.tscn" type="PackedScene" id=6]
 [ext_resource path="res://vehicles/bluerovheavy/bluerov cleaned decimated.gltf" type="PackedScene" id=7]
+[ext_resource path="res://addons/thruster_nodes/thruster_node.gd" type="Script" id=8]
 
 [sub_resource type="PhysicsMaterial" id=1]
 friction = 3.0
@@ -48,6 +49,54 @@ surfaces/0 = {
 "vertex_count": 1106
 }
 
+[sub_resource type="SpatialMaterial" id=14]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=19]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=20]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=21]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=15]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=16]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=17]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
+[sub_resource type="SpatialMaterial" id=18]
+render_priority = 127
+flags_unshaded = true
+flags_no_depth_test = true
+flags_use_point_size = true
+
 [sub_resource type="BoxShape" id=5]
 extents = Vector3( 0.527838, 0.22, 0.457 )
 
@@ -87,11 +136,6 @@ tracks/0/keys = {
 
 [sub_resource type="SpatialMaterial" id=11]
 albedo_color = Color( 0.0196078, 0.0196078, 0.0196078, 1 )
-emission_enabled = true
-emission = Color( 1, 0, 0, 1 )
-emission_energy = 1.0
-emission_operator = 0
-emission_on_uv2 = false
 
 [sub_resource type="Animation" id=12]
 resource_name = "green_led"
@@ -177,6 +221,62 @@ linear_damp = 2.333
 angular_damp = 8.72
 script = ExtResource( 1 )
 
+[node name="t1" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.191026, -0.181772, -8.15026e-09, -1.15227e-08, -2.86034e-10, -0.263689, 0.181772, 0.191026, -8.15026e-09, -0.192815, -0.125495, 0.284096 )
+material_override = SubResource( 14 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t2" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( -0.181772, -0.191026, 8.15026e-09, -1.15227e-08, -2.86034e-10, -0.263689, 0.191026, -0.181772, -8.15026e-09, 0.175115, -0.125495, 0.284096 )
+material_override = SubResource( 19 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t3" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.181772, 0.191026, -8.15026e-09, -1.15227e-08, -2.86034e-10, -0.263689, -0.191026, 0.181772, 8.15026e-09, -0.198316, -0.125495, -0.320506 )
+material_override = SubResource( 20 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t4" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( -0.191026, 0.181772, 8.15026e-09, -1.15227e-08, -2.86034e-10, -0.263689, -0.181772, -0.191026, 8.15026e-09, 0.197343, -0.125495, -0.33162 )
+material_override = SubResource( 21 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t5" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, -0.432878, 0.032324, 0.228526 )
+material_override = SubResource( 15 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t6" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, 0.434015, 0.032324, 0.228526 )
+material_override = SubResource( 16 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t7" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, -0.437324, 0.032324, -0.247154 )
+material_override = SubResource( 17 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
+[node name="t8" type="ImmediateGeometry" parent="BlueRov"]
+transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, 0.42957, 0.032324, -0.247154 )
+material_override = SubResource( 18 )
+script = ExtResource( 8 )
+thickness = 0.1
+height = 0.5
+
 [node name="newton" parent="BlueRov" instance=ExtResource( 2 )]
 transform = Transform( 0.303697, -0.141171, 6.1708e-09, 0, -1.46392e-08, -0.334905, 0.141171, 0.303697, -1.3275e-08, 0.218238, -0.255554, 0.0306985 )
 
@@ -186,30 +286,6 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.287675, -0.952809 )
 [node name="CollisionShape" type="CollisionShape" parent="BlueRov"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.0931243, 0.0262922 )
 shape = SubResource( 5 )
-
-[node name="t2" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.175974, 0.0822383, 0.324292 )
-
-[node name="t1" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.176, 0.0822383, 0.324292 )
-
-[node name="t3" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.176, 0.0822383, -0.294785 )
-
-[node name="t4" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.146356, 0.0822383, -0.294708 )
-
-[node name="t5" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 0.999908, -0.0135782, 0, 0.0135782, 0.999908, -0.43358, 0.0578757, 0.243472 )
-
-[node name="t6" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0.445236, 0.0578757, 0.296299 )
-
-[node name="t8" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 0.999908, -0.0135782, 0, 0.0135782, 0.999908, 0.431022, 0.0578757, -0.1298 )
-
-[node name="t7" type="Spatial" parent="BlueRov"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.429783, 0.0578757, -0.130794 )
 
 [node name="light1" type="SpotLight" parent="BlueRov"]
 transform = Transform( -1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.337544, -0.199193, 0.496962 )

@@ -1,6 +1,6 @@
 extends RigidBody
 
-const THRUST = 50
+const THRUST = 200
 
 var interface = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = null
@@ -133,24 +133,24 @@ func actuate_servo(id, percentage):
 	if percentage == 0:
 		return
 
-	var force = (percentage - 0.5) * 2 * THRUST
+	var force = (percentage - 0.5) * 2 * -THRUST
 	match id:
 		0:
-			self.add_force_local(Vector3(-force, 0, -force), $t1.translation)
+			self.add_force_local($t1.transform.basis*Vector3(force,0,0), $t1.translation)
 		1:
-			self.add_force_local(Vector3(force, 0, -force), $t2.translation)
+			self.add_force_local($t2.transform.basis*Vector3(force,0,0), $t2.translation)
 		2:
-			self.add_force_local(Vector3(-force, 0, force), $t3.translation)
+			self.add_force_local($t3.transform.basis*Vector3(force,0,0), $t3.translation)
 		3:
-			self.add_force_local(Vector3(force, 0, force), $t4.translation)
+			self.add_force_local($t4.transform.basis*Vector3(force,0,0), $t4.translation)
 		4:
-			self.add_force_local(Vector3(0, -force, 0), $t5.translation)
+			self.add_force_local($t5.transform.basis*Vector3(force,0,0), $t5.translation)
 		5:
-			self.add_force_local(Vector3(0, -force, 0), $t6.translation)
+			self.add_force_local($t6.transform.basis*Vector3(force,0,0), $t6.translation)
 		6:
-			self.add_force_local(Vector3(0, -force, 0), $t7.translation)
+			self.add_force_local($t7.transform.basis*Vector3(force,0,0), $t7.translation)
 		7:
-			self.add_force_local(Vector3(0, -force, 0), $t8.translation)
+			self.add_force_local($t8.transform.basis*Vector3(force,0,0), $t8.translation)
 		8:
 			$Camera.rotation_degrees.x = -45 + 90 * percentage
 		9:
