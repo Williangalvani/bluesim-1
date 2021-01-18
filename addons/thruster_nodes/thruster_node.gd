@@ -7,6 +7,16 @@ export var thickness = 0.01
 export var height = 0.1
 export var thrust = 1
 
+export (bool) var roll_factor = true
+export (bool) var pitch_factor = true
+export (bool) var yaw_factor = true
+
+export (bool) var vertical_factor = true
+export (bool) var forward_factor = true
+export (bool) var lateral_factor = true
+
+func get_class():
+	return "Thruster"
 
 func _ready():
 	if Engine.is_editor_hint():

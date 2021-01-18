@@ -97,8 +97,18 @@ func send_fdm():
 	buffer.put_utf8_string(JSON_string)
 	interface.put_packet(buffer.data_array)
 
-
+func calculate_motors_matrix():
+	var thrusters = []
+	for child in get_children():
+		if child.get_class() ==  "Thruster":
+			thrusters.append(child)
+	for thruster in thrusters:
+		# var roll_vector = 
+		print(thruster.get_name())
+	
+	
 func _ready():
+	calculate_motors_matrix()
 	if Globals.active_vehicle == "bluerovheavy":
 		$Camera.set_current(true)
 	_initial_position = get_global_transform().origin
