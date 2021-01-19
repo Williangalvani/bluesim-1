@@ -15,10 +15,14 @@ export (bool) var vertical_factor = true
 export (bool) var forward_factor = true
 export (bool) var lateral_factor = true
 
+# keeps track of transform changes to update motors matrix
+var last_transform
+
 func get_class():
 	return "Thruster"
 
 func _ready():
+	last_transform = transform
 	if Engine.is_editor_hint():
 		set_process(true)
 		m.flags_unshaded = true
@@ -29,6 +33,9 @@ func _ready():
 		set_process(false)
 
 func _process(_delta):
+	if last_transform != transform:
+		get_parent().calculate_motors_matrix()
+		last_transform = transform
 	m.albedo_color = Color(1.0, 1.0, 1.0, 1.0)
 	m.flags_no_depth_test = true
 	m.render_priority = m.RENDER_PRIORITY_MAX

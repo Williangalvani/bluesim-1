@@ -10,7 +10,6 @@
 [ext_resource path="res://vehicles/bluerovheavy/BlueRovHeavy.tscn" type="PackedScene" id=8]
 [ext_resource path="res://scenery/misc/pool/pool.tscn" type="PackedScene" id=9]
 
-
 [sub_resource type="GDScript" id=1]
 script/source = "# Licensed under the MIT License.
 # Copyright (c) 2018-2020 Jaccomo Lorenz (Maujoe)

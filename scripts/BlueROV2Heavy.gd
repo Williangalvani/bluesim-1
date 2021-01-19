@@ -1,3 +1,4 @@
+tool
 extends RigidBody
 
 const THRUST = 200
@@ -18,7 +19,6 @@ onready var light_glows = [$light_glow, $light_glow2, $light_glow3, $light_glow4
 onready var ljoint = get_tree().get_root().find_node("ljoint", true, false)
 onready var rjoint = get_tree().get_root().find_node("rjoint", true, false)
 onready var wait_SITL = Globals.wait_SITL
-
 
 func connect_fmd_in():
 	if interface.listen(9002) != OK:
@@ -97,18 +97,47 @@ func send_fdm():
 	buffer.put_utf8_string(JSON_string)
 	interface.put_packet(buffer.data_array)
 
+
+func get_motors_table_entry(thruster):
+	
+	var thruster_vector = (thruster.transform.basis*Vector3(1,0,0)).normalized()
+	var roll = Vector3(0,0,-1).cross(thruster.translation).normalized().dot(thruster_vector)
+	var pitch = Vector3(1,0,0).cross(thruster.translation).normalized().dot(thruster_vector)
+	var yaw = Vector3(0,1,0).cross(thruster.translation).normalized().dot(thruster_vector)
+	var forward = Vector3(0,0,-1).dot(thruster_vector)
+	var lateral = Vector3(1,0,0).dot(thruster_vector)
+	var vertical = Vector3(0,-1,0).dot(thruster_vector)
+	if abs(roll) < 0.15 or not thruster.roll_factor:
+		roll = 0
+	if abs(pitch) < 0.15 or not thruster.pitch_factor:
+		pitch = 0
+	if abs(yaw) < 0.15 or not thruster.yaw_factor:
+		yaw = 0
+	if abs(vertical) < 0.15 or not thruster.vertical_factor :
+		vertical = 0
+	if abs(forward) < 0.15 or not thruster.forward_factor:
+		forward = 0
+	if abs(lateral) < 0.15 or not thruster.lateral_factor:
+		lateral = 0
+	return [roll, pitch, yaw, vertical, forward, lateral]
+
 func calculate_motors_matrix():
+	print("Calculated Motors Matrix:")
 	var thrusters = []
+	var i = 0
 	for child in get_children():
 		if child.get_class() ==  "Thruster":
 			thrusters.append(child)
 	for thruster in thrusters:
-		# var roll_vector = 
-		print(thruster.get_name())
-	
-	
+		var entry = get_motors_table_entry(thruster)
+		entry.insert(0, i)
+		i = i + 1
+		print("add_motor_raw_6dof(AP_MOTORS_MOT_%s,\t%s,\t%s,\t%s,\t%s,\t%s,\t%s);" % entry)
+
 func _ready():
-	calculate_motors_matrix()
+	if Engine.is_editor_hint():
+		calculate_motors_matrix()
+		return
 	if Globals.active_vehicle == "bluerovheavy":
 		$Camera.set_current(true)
 	_initial_position = get_global_transform().origin
@@ -122,6 +151,8 @@ func _ready():
 
 
 func _physics_process(delta):
+	if Engine.is_editor_hint():
+		return
 	phys_time = phys_time + 1.0 / Globals.physics_rate
 	process_keys()
 	if Globals.isHTML5:
