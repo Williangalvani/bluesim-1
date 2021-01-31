@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=2]
 
-[ext_resource path="res://rope/section.gd" type="Script" id=1]
+[ext_resource path="res://bin/gdexample.gdns" type="Script" id=1]
 
 [sub_resource type="CapsuleShape" id=1]
 margin = 0.001
