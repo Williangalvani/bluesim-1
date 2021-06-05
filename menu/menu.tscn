@@ -37,7 +37,8 @@ class LevelLoader:
 		# They must have a custom_level.tscn file
 		var valid = {}
 		for file in found:
-			if not ProjectSettings.load_resource_pack(\"res://levels/\" + file):
+			print(file)
+			if not ProjectSettings.load_resource_pack(bin_path + \"/levels/\" + file):
 				print(\"Failed to load file: \" + file)
 			# Now one can use the assets as if they had them in the project from the start
 			var imported_scene = load(\"res://custom_level.tscn\")
@@ -293,6 +294,7 @@ text = "Starting...
 __meta__ = {
 "_edit_use_anchors_": false
 }
+
 [connection signal="pressed" from="HBoxContainer/Menu/Buttons/poolLevel" to="." method="_on_poolLevel_pressed"]
 [connection signal="pressed" from="HBoxContainer/Menu/Buttons/customLevel" to="." method="_on_customLevel_pressed"]
 [connection signal="toggled" from="HBoxContainer/Menu/CheckBox" to="." method="_on_CheckBox_toggled"]

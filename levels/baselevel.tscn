@@ -606,6 +606,7 @@ rect_min_size = Vector2( 1024, 600 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
+
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/godrayToggle" to="ViewportGlobal/Viewport/Scene" method="_on_godrayToggle_toggled"]
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/dirtparticlesToggle" to="ViewportGlobal/Viewport/Scene" method="_on_dirtparticlesToggle_toggled"]
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/fancyWaterToggle" to="ViewportGlobal/Viewport/Scene" method="_on_fancyWaterToggle_toggled"]
