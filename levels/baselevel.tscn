@@ -259,12 +259,14 @@ script/source = "extends Spatial
 const SECTION = preload(\"res://rope/section.tscn\")
 const LINK = preload(\"res://rope/joint.tscn\")
 
+export (NodePath) var target = \"\"
+export (String) var targetRigidBody = \"BlueRov\"
 var offset = Vector3(0,0,-0.434)
 export (int) var loops = 1
 var vehicle
 
 func _ready():
-	var parent = get_parent().find_node(\"BlueRov\", true, false)
+	var parent = get_node(target).find_node(targetRigidBody, true, false)
 	for i in range (loops):
 		var child = addSection(parent, i)
 		addLink(parent, child, i)
@@ -378,9 +380,10 @@ mouse_mode = 0
 far = 275.0
 
 [node name="theter" type="Spatial" parent="ViewportCamera/Viewport"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.769269 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.10268 )
 script = SubResource( 2 )
-loops = 100
+target = NodePath("../BlueRovHeavy")
+loops = 50
 
 [node name="cameraPosition" type="Spatial" parent="ViewportCamera/Viewport"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 4.21178, 10.2615, 4.21928 )
@@ -489,7 +492,8 @@ __meta__ = {
 pause_mode = 2
 anchor_left = 1.0
 anchor_right = 1.0
-margin_left = -362.0
+margin_left = -361.0
+margin_right = 1.0
 margin_bottom = 248.0
 grow_horizontal = 2
 grow_vertical = 2

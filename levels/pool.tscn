@@ -9,20 +9,20 @@
 
 [sub_resource type="SphereMesh" id=3]
 
-[sub_resource type="SpatialMaterial" id=7]
+[sub_resource type="SpatialMaterial" id=4]
 albedo_color = Color( 0.988235, 0, 0, 1 )
 
-[sub_resource type="SphereShape" id=4]
+[sub_resource type="SphereShape" id=5]
 radius = 0.110888
 
-[sub_resource type="CylinderMesh" id=5]
+[sub_resource type="CylinderMesh" id=6]
 
-[sub_resource type="SpatialMaterial" id=8]
+[sub_resource type="SpatialMaterial" id=7]
 albedo_color = Color( 1, 0, 0, 1 )
 
-[sub_resource type="SphereMesh" id=9]
+[sub_resource type="SphereMesh" id=8]
 
-[sub_resource type="CylinderShape" id=6]
+[sub_resource type="CylinderShape" id=9]
 radius = 0.0136777
 height = 0.547593
 
@@ -101,10 +101,10 @@ buoyancy = 17
 [node name="MeshInstance" type="MeshInstance" parent="toy/RigidBody"]
 transform = Transform( 0.109637, 0, 0, 0, 0.109637, 0, 0, 0, 0.109637, 0, 0, 0 )
 mesh = SubResource( 3 )
-material/0 = SubResource( 7 )
+material/0 = SubResource( 4 )
 
 [node name="CollisionShape" type="CollisionShape" parent="toy/RigidBody"]
-shape = SubResource( 4 )
+shape = SubResource( 5 )
 
 [node name="RigidBody2" type="RigidBody" parent="toy"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.158549, -0.391697, 0.28618 )
@@ -113,16 +113,16 @@ angular_damp = 5.0
 
 [node name="MeshInstance" type="MeshInstance" parent="toy/RigidBody2"]
 transform = Transform( 0.0135497, 0, 0, 0, 0.271717, 0, 0, 0, 0.0135497, 0, 0, 0 )
-mesh = SubResource( 5 )
-material/0 = SubResource( 8 )
+mesh = SubResource( 6 )
+material/0 = SubResource( 7 )
 
 [node name="MeshInstance2" type="MeshInstance" parent="toy/RigidBody2"]
 transform = Transform( 0.0478584, 0, 0, 0, 0.0478584, 0, 0, 0, 0.0478584, 0, -0.309212, 0 )
-mesh = SubResource( 9 )
-material/0 = SubResource( 8 )
+mesh = SubResource( 8 )
+material/0 = SubResource( 7 )
 
 [node name="CollisionShape" type="CollisionShape" parent="toy/RigidBody2"]
-shape = SubResource( 6 )
+shape = SubResource( 9 )
 
 [node name="CollisionShape2" type="CollisionShape" parent="toy/RigidBody2"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.315821, 0 )
