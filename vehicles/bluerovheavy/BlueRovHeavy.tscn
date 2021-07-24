@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=2]
+[gd_scene load_steps=32 format=2]
 
 [ext_resource path="res://scripts/BlueROV2Heavy.gd" type="Script" id=1]
 [ext_resource path="res://vehicles/components/newton.tscn" type="PackedScene" id=2]
@@ -49,49 +49,49 @@ surfaces/0 = {
 "vertex_count": 1106
 }
 
-[sub_resource type="SpatialMaterial" id=5]
+[sub_resource type="SpatialMaterial" id=22]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=6]
+[sub_resource type="SpatialMaterial" id=23]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=7]
+[sub_resource type="SpatialMaterial" id=24]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=8]
+[sub_resource type="SpatialMaterial" id=25]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=9]
+[sub_resource type="SpatialMaterial" id=26]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=10]
+[sub_resource type="SpatialMaterial" id=27]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=11]
+[sub_resource type="SpatialMaterial" id=28]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
 albedo_color = Color( 1, 1, 1, 0.8 )
 
-[sub_resource type="SpatialMaterial" id=12]
+[sub_resource type="SpatialMaterial" id=29]
 render_priority = 127
 flags_unshaded = true
 flags_no_depth_test = true
@@ -153,6 +153,15 @@ tracks/0/keys = {
 
 [sub_resource type="CubeMesh" id=21]
 size = Vector3( 0.1, 0.1, 0.1 )
+
+[sub_resource type="SpatialMaterial" id=30]
+albedo_color = Color( 0.956863, 0.74902, 0.0392157, 1 )
+
+[sub_resource type="CapsuleMesh" id=31]
+material = SubResource( 30 )
+radius = 0.006
+mid_height = 0.145
+radial_segments = 6
 
 [node name="BlueRovHeavy" type="Spatial"]
 
@@ -222,7 +231,7 @@ script = ExtResource( 1 )
 
 [node name="t1" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.186456, -0.186456, 3.03776e-08, 0, -4.29603e-08, -0.263689, 0.186456, 0.186456, -3.03776e-08, -0.192815, -0.125495, 0.284096 )
-material_override = SubResource( 5 )
+material_override = SubResource( 22 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
@@ -231,7 +240,7 @@ pitch_factor = false
 
 [node name="t2" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( -0.186456, -0.186456, 3.03776e-08, 0, -4.29604e-08, -0.263689, 0.186456, -0.186456, 3.03776e-08, 0.175115, -0.125495, 0.284096 )
-material_override = SubResource( 6 )
+material_override = SubResource( 23 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
@@ -240,7 +249,7 @@ pitch_factor = false
 
 [node name="t3" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.186456, 0.186456, -3.03776e-08, 0, -4.29604e-08, -0.263689, -0.186456, 0.186456, -3.03776e-08, -0.198316, -0.125495, -0.320506 )
-material_override = SubResource( 7 )
+material_override = SubResource( 24 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
@@ -249,7 +258,7 @@ pitch_factor = false
 
 [node name="t4" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( -0.186456, 0.186456, -3.03776e-08, 0, -4.29604e-08, -0.263689, -0.186456, -0.186456, 3.03776e-08, 0.197343, -0.125495, -0.33162 )
-material_override = SubResource( 8 )
+material_override = SubResource( 25 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
@@ -258,28 +267,28 @@ pitch_factor = false
 
 [node name="t5" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 8.88178e-16, 0.263689, -0.432878, 0.032324, 0.228526 )
-material_override = SubResource( 9 )
+material_override = SubResource( 26 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
 
 [node name="t6" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, 0.434015, 0.032324, 0.228526 )
-material_override = SubResource( 10 )
+material_override = SubResource( 27 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
 
 [node name="t7" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 6.38378e-16, 0.263689, -0.437324, 0.032324, -0.247154 )
-material_override = SubResource( 11 )
+material_override = SubResource( 28 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
 
 [node name="t8" type="ImmediateGeometry" parent="BlueRov"]
 transform = Transform( 0.00654368, -0.263608, 0, 0.263608, 0.00654368, 7.10543e-15, 1.77636e-15, 8.88178e-16, 0.263689, 0.42957, 0.032324, -0.247154 )
-material_override = SubResource( 12 )
+material_override = SubResource( 29 )
 script = ExtResource( 8 )
 thickness = 0.1
 height = 0.5
@@ -390,3 +399,8 @@ anims/green_led = SubResource( 20 )
 [node name="sonar" parent="BlueRov" instance=ExtResource( 6 )]
 transform = Transform( 0.0614213, 0, 0, 0, 0.0614213, 0, 0, 0, 0.0614213, -0.220256, 0.235284, -0.0282408 )
 mesh = SubResource( 21 )
+
+[node name="MeshInstance" type="MeshInstance" parent="BlueRov"]
+transform = Transform( -1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, -0.00843755, 0.082433, -0.341376 )
+mesh = SubResource( 31 )
+material/0 = null
