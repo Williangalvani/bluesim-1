@@ -1,7 +1,13 @@
-[gd_resource type="Environment" load_steps=2 format=2]
+[gd_resource type="Environment" load_steps=3 format=3 uid="uid://grpxs1w3f4ke"]
 
-[sub_resource type="ProceduralSky" id=1]
+[sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_aihv1"]
+ground_color = Color(0.141176, 0.870588, 0.803922, 1)
+
+[sub_resource type="Sky" id="1"]
+sky_material = SubResource("PhysicalSkyMaterial_aihv1")
 
 [resource]
 background_mode = 2
-background_sky = SubResource( 1 )
+sky = SubResource("1")
+ambient_light_color = Color(0.847059, 0.847059, 0.847059, 1)
+glow_enabled = true

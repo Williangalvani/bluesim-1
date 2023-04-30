@@ -1,20 +1,27 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=7 format=3 uid="uid://d2pk0jdvrv5gh"]
 
-[ext_resource path="res://vehicles/components/Metallic blue.material" type="Material" id=1]
-[ext_resource path="res://vehicles/components/Metallic black.material" type="Material" id=2]
-[ext_resource path="res://imports/newton/newton.dae" type="PackedScene" id=3]
-[ext_resource path="res://vehicles/components/Metallic gray.material" type="Material" id=4]
+[ext_resource type="Material" uid="uid://7tcomo83twb" path="res://vehicles/bluerovheavy/blackmetal.tres" id="2_axypr"]
+[ext_resource type="PackedScene" uid="uid://dglj8xca11imm" path="res://imports/newton/newton.dae" id="3"]
 
-[node name="newton" instance=ExtResource( 3 )]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u4mu8"]
+albedo_color = Color(0, 0.45098, 0.796078, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qsm3r"]
+albedo_color = Color(0, 0.45098, 0.796078, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gva4i"]
+albedo_color = Color(0, 0.45098, 0.796078, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_oocat"]
+albedo_color = Color(0, 0, 0, 1)
+
+[node name="newton" instance=ExtResource("3")]
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC020" parent="." index="0"]
-material/0 = ExtResource( 1 )
+surface_material_override/0 = SubResource("StandardMaterial3D_u4mu8")
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC018" parent="." index="1"]
-material/0 = ExtResource( 2 )
-
-[node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC017" parent="." index="2"]
-material/0 = ExtResource( 4 )
+surface_material_override/0 = ExtResource("2_axypr")
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC016" parent="." index="3"]
 visible = false
@@ -31,17 +38,11 @@ visible = false
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC012" parent="." index="7"]
 visible = false
 
-[node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC011" parent="." index="8"]
-material/0 = ExtResource( 4 )
-
-[node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC010" parent="." index="9"]
-material/0 = ExtResource( 4 )
-
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC009" parent="." index="10"]
-material/0 = ExtResource( 2 )
+surface_material_override/0 = SubResource("StandardMaterial3D_qsm3r")
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC008" parent="." index="11"]
-material/0 = ExtResource( 1 )
+surface_material_override/0 = SubResource("StandardMaterial3D_gva4i")
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC007" parent="." index="12"]
 visible = false
@@ -50,14 +51,14 @@ visible = false
 visible = false
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC005" parent="." index="14"]
-transform = Transform( 0, 0, -0.00612748, 0, 0.00612748, 0, 0.00612748, 0, 0, -0.216832, 0.341509, -0.184641 )
+transform = Transform3D(0, 0, -0.00612748, 0, 0.00612748, 0, 0.00612748, 0, 0, -0.216832, 0.341509, -0.184641)
 visible = false
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC004" parent="." index="15"]
 visible = false
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC001" parent="." index="16"]
-material/0 = ExtResource( 2 )
+surface_material_override/0 = SubResource("StandardMaterial3D_oocat")
 
 [node name="NEWTON-GRIPPER-ASSEM-R3-PUBLIC" parent="." index="17"]
 visible = false

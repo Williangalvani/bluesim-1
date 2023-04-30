@@ -1,6 +1,6 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=2]
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bqefm2sjfvjij"]
 
-[sub_resource type="Shader" id=1]
+[sub_resource type="Shader" id="1"]
 code = "shader_type canvas_item;
 
 uniform sampler2D my_array;
@@ -73,5 +73,4 @@ void fragment() {
 }"
 
 [resource]
-render_priority = 2
-shader = SubResource( 1 )
+shader = SubResource("1")

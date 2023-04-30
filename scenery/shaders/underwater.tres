@@ -1,0 +1,30 @@
+[gd_resource type="ShaderMaterial" load_steps=6 format=3 uid="uid://cqgrgysdqshgm"]
+
+[ext_resource type="Shader" path="res://scenery/shaders/underwater.gdshader" id="1_fcrxx"]
+[ext_resource type="Texture2D" uid="uid://dibjuqya8oq0r" path="res://scenery/shaders/shader_textures/Foam.png" id="2_rardg"]
+[ext_resource type="Texture2D" uid="uid://dwttmmeovr2ex" path="res://scenery/shaders/shader_textures/Water_N_A.png" id="3_xox14"]
+[ext_resource type="Texture2D" uid="uid://3g2awt74wnvu" path="res://scenery/shaders/shader_textures/Water_N_B.png" id="4_2japx"]
+[ext_resource type="Texture2D" uid="uid://dfts0yp6rgycw" path="res://scenery/shaders/shader_textures/Water_UV.png" id="5_6m68j"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_fcrxx")
+shader_parameter/wave_speed = 0.5
+shader_parameter/wave_a = Vector4(0.01, 0.026, 0.01, 0.132)
+shader_parameter/wave_b = Vector4(0.156, -0.003, 0.021, 0.074)
+shader_parameter/wave_c = Vector4(0.087, 0.048, 0.041, 0.047)
+shader_parameter/sampler_scale = Vector2(13.23, 13.75)
+shader_parameter/sampler_direction = Vector2(0.05, 0.04)
+shader_parameter/uv_sampler_scale = Vector2(0.25, 0.25)
+shader_parameter/uv_sampler_strength = 0.04
+shader_parameter/foam_level = 0.5
+shader_parameter/refraction = 2.08165e-12
+shader_parameter/alpha_factor = 1.0
+shader_parameter/ambient_color = Color(0.596078, 0.823529, 1, 1)
+shader_parameter/color_shallow = Color(0.270588, 0.580392, 1, 1)
+shader_parameter/color_deep = Color(0.168627, 0.376471, 0.470588, 1)
+shader_parameter/projector = null
+shader_parameter/uv_sampler = ExtResource("5_6m68j")
+shader_parameter/normalmap_a_sampler = ExtResource("3_xox14")
+shader_parameter/normalmap_b_sampler = ExtResource("4_2japx")
+shader_parameter/foam_sampler = ExtResource("2_rardg")
