@@ -64,7 +64,7 @@ func download_file(url : String, file_name : String):
 func _all_files_downloaded():
 	if OS.get_name() == \"Windows\":
 		return len(downloaded_files) == 4
-	elif OS.get_name() == \"X11\":
+	elif OS.get_name() == \"Linux\":
 		return len(downloaded_files) == 1
 		
 func _on_download_finished(_result, _response_code, headers, body, file_name):
@@ -84,7 +84,7 @@ func _start_sitl():
 		add_status(\"SITL is running\")
 		$HBoxContainer/Menu/Buttons.visible = true
 		
-	elif OS.get_name() == \"X11\":
+	elif OS.get_name() == \"Linux\":
 		var binary = FileAccess.open(\"user://ardusub\", FileAccess.READ)
 		print(binary.get_path_absolute())
 		print(OS.execute(\"chmod\", [\"+x\", binary.get_path_absolute()], output))
@@ -281,6 +281,10 @@ text = "Pool"
 visible = false
 layout_mode = 2
 text = "Ship Level"
+
+[node name="Button" type="Button" parent="HBoxContainer/Menu/Buttons"]
+layout_mode = 2
+text = "teste"
 
 [node name="CheckBox" type="CheckBox" parent="HBoxContainer/Menu"]
 layout_mode = 2
