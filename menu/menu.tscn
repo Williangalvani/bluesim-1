@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://m2r116uqfaff"]
 
 [ext_resource type="Environment" path="res://menu/menuEnvironment.tres" id="2"]
-[ext_resource type="PackedScene" uid="uid://1wagv83d1du3" path="res://vehicles/bluerovheavy/bluerov_cleaned_decimated_colorfixed.tscn" id="3_xdd7d"]
+[ext_resource type="PackedScene" uid="uid://u3a6ab83b0jv" path="res://blender_sources/bluerov2.blend" id="2_lqlur"]
 
 [sub_resource type="GDScript" id="1"]
 script/source = "extends Control
@@ -251,8 +251,8 @@ libraries = {
 }
 autoplay = "rotatingbluerov"
 
-[node name="bluerov cleaned decimated2" parent="SubViewportContainer/SubViewport/Node3D" instance=ExtResource("3_xdd7d")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.358042, 0, -0.230423)
+[node name="bluerov2" parent="SubViewportContainer/SubViewport/Node3D" instance=ExtResource("2_lqlur")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.0217752, 0, 0.0104795)
 
 [node name="versionLabel" type="Label" parent="SubViewportContainer"]
 layout_mode = 2
