@@ -119,16 +119,7 @@ func find_external_levels():
 	var levels = loader.list_available_external_levels()
 	self.create_level_buttons(levels)
 
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	print(\"starting\")
-	print(OS.get_cmdline_args())
-	set_version()
-	get_tree().set_auto_accept_quit(false)
-	find_external_levels()
-	$HBoxContainer/Menu/Buttons.visible = false
-	print(OS.get_name())
-
+func launch_sitl():
 	if OS.get_name() == \"Windows\":
 		if not FileAccess.file_exists(\"user://ardusub.exe\"):
 			add_status(\"SITL binary not found, downloading...\")
@@ -143,11 +134,6 @@ func _ready():
 			download_file(\"https://firmware.ardupilot.org/Sub/latest/SITL_x86_64_linux_gnu/ardusub\", \"user://ardusub\")
 		
 		_start_sitl()
-		var args = Array(OS.get_cmdline_args())
-		print(args)
-		if args.has(\"--pool\"):
-			print(\"headless run, loading pool level...\")
-			_on_poolLevel_pressed()
 	elif OS.get_name() == \"macOS\":
 		var user_data_path = OS.get_user_data_dir()
 	
@@ -163,6 +149,21 @@ func _ready():
 		$HBoxContainer/Menu/Buttons.visible = true
 		$HBoxContainer/Menu/CheckBox.visible = false
 		add_status(\"SITL not available for plataform: %s\" % OS.get_name())
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	print(\"starting\")
+	print(OS.get_cmdline_args())
+	set_version()
+	get_tree().set_auto_accept_quit(false)
+	find_external_levels()
+	$HBoxContainer/Menu/Buttons.visible = false
+	print(OS.get_name())
+	var args = Array(OS.get_cmdline_args())
+	if args.has(\"--no-sitl\"):
+		print(\"skipping sitl launch\")
+		$HBoxContainer/Menu/Buttons.visible = true
+	else:
+		self.launch_sitl()
 
 func _on_poolLevel_pressed():
 	Globals.active_vehicle = \"bluerovheavy\"
@@ -178,6 +179,12 @@ func _on_customLevel_pressed(filename):
 	ProjectSettings.load_resource_pack(\"res://levels/\" + filename)
 	SceneLoader.goto_scene(\"res://levels/baselevel.tscn\")
 
+
+
+func _on_timer_timeout():
+	var args = Array(OS.get_cmdline_args())
+	if args.has(\"--pool\"):
+		self._on_poolLevel_pressed()
 "
 
 [sub_resource type="Animation" id="2"]
@@ -282,10 +289,6 @@ visible = false
 layout_mode = 2
 text = "Ship Level"
 
-[node name="Button" type="Button" parent="HBoxContainer/Menu/Buttons"]
-layout_mode = 2
-text = "teste"
-
 [node name="CheckBox" type="CheckBox" parent="HBoxContainer/Menu"]
 layout_mode = 2
 text = "Sync with SITL (only run frames when new input arrive)"
@@ -296,6 +299,12 @@ layout_mode = 2
 text = "Starting...
 "
 
+[node name="Timer" type="Timer" parent="HBoxContainer/Menu"]
+wait_time = 5.0
+one_shot = true
+autostart = true
+
 [connection signal="pressed" from="HBoxContainer/Menu/Buttons/poolLevel" to="." method="_on_poolLevel_pressed"]
 [connection signal="pressed" from="HBoxContainer/Menu/Buttons/customLevel" to="." method="_on_customLevel_pressed"]
 [connection signal="toggled" from="HBoxContainer/Menu/CheckBox" to="." method="_on_CheckBox_toggled"]
+[connection signal="timeout" from="HBoxContainer/Menu/Timer" to="." method="_on_timer_timeout"]
