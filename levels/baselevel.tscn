@@ -319,6 +319,7 @@ script = ExtResource("7")
 
 [node name="ViewportGlobal" type="SubViewportContainer" parent="."]
 process_mode = 2
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -332,7 +333,7 @@ stretch = true
 [node name="SubViewport" type="SubViewport" parent="ViewportGlobal"]
 handle_input_locally = false
 size = Vector2i(1152, 648)
-render_target_update_mode = 4
+render_target_update_mode = 0
 
 [node name="Camera3D" type="Camera3D" parent="ViewportGlobal/SubViewport" groups=["cameras"]]
 process_mode = 1
@@ -348,15 +349,15 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -808.0
-offset_bottom = -402.0
+offset_right = 128.0
+offset_bottom = 72.0
 grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="ViewportCamera"]
 handle_input_locally = false
-size = Vector2i(344, 246)
+size = Vector2i(1280, 720)
 render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
 
