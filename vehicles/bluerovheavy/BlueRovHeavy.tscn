@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://d0rv01klybh31"]
+[gd_scene load_steps=25 format=3 uid="uid://d0rv01klybh31"]
 
 [ext_resource type="Script" path="res://scripts/BlueROV2Heavy.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://d2pk0jdvrv5gh" path="res://vehicles/components/newton.tscn" id="2"]
@@ -77,6 +77,9 @@ size = Vector3(1.01712, 0.482312, 0.907382)
 
 [sub_resource type="BoxMesh" id="21"]
 size = Vector3(0.1, 0.1, 0.1)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_swiu1"]
+radius = 0.075445
 
 [node name="BlueRovHeavy" type="Node3D"]
 process_mode = 3
@@ -281,3 +284,7 @@ target_position = Vector3(2.08165e-12, -100, 2.08165e-12)
 [node name="sonar" parent="BlueRov" instance=ExtResource("6")]
 transform = Transform3D(0.0614213, 0, 0, 0, 0.0614213, 0, 0, 0, 0.0614213, -0.220256, 0.235284, -0.0282408)
 mesh = SubResource("21")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="BlueRov"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.79397e-08, 0.0134256, 0.392363)
+shape = SubResource("SphereShape3D_swiu1")

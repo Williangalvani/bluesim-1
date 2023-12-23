@@ -45,7 +45,6 @@ func calculate_buoyancy_and_ballast():
 			var buoyancy = vehicle.buoyancy
 			if vehicle.transform.origin.y > surface_altitude:
 				buoyancy = 0
-			print("applying," , buoyancy, " to ", vehicle)
 			vehicle.apply_force(Vector3(0, buoyancy, 0),vehicle.transform.basis.y * +0.3)
 		var ballasts = vehicle.find_child("ballasts")
 		if ballasts:
