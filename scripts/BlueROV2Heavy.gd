@@ -321,9 +321,9 @@ func process_keys():
 		self.apply_torque(self.transform.basis * Vector3(0, -THRUST, 0))
 
 	if Input.is_action_pressed("camera_up"):
-		$Camera3D.rotation_degrees.x = min($Camera3D.rotation_degrees.x + 0.1, 45)
+		$Camera3D.rotation_degrees.x = min($Camera3D.rotation_degrees.x + 0.5, 45)
 	elif Input.is_action_pressed("camera_down"):
-		$Camera3D.rotation_degrees.x = max($Camera3D.rotation_degrees.x - 0.1, -45)
+		$Camera3D.rotation_degrees.x = max($Camera3D.rotation_degrees.x - 0.5, -45)
 
 	if Input.is_action_pressed("gripper_open"):
 		ljoint.set_param(6, 1)
