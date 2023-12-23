@@ -8,6 +8,8 @@ script/source = "extends Control
 
 var downloaded_files = []
 
+var pool_level = preload(\"res://levels/pool.tscn\")
+
 class LevelLoader:
 	var bin_path = OS.get_user_data_dir()
 
