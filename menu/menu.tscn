@@ -9,7 +9,7 @@ script/source = "extends Control
 var downloaded_files = []
 
 class LevelLoader:
-	var bin_path = OS.get_executable_path().get_base_dir()
+	var bin_path = OS.get_user_data_dir()
 
 	func ensure_levels_folder_exists():
 		var directory = DirAccess.open(bin_path)
