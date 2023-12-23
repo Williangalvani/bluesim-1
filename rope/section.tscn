@@ -29,4 +29,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 8.35189e-23, 0, 8.35188e-23, 1, 0, 0, 0)
 shape = SubResource("1")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1.07837, 8.35189e-23, 0, -1.47553e-15, 1, 0, 0, 0)
 mesh = SubResource("3")
