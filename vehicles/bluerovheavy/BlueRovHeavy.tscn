@@ -150,7 +150,6 @@ surface_material_override/0 = ExtResource("2_msiqi")
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0262519, 0, 0.0185718)
 mass = 11.0
 physics_material_override = SubResource("PhysicsMaterial_n3gys")
-gravity_scale = 2.66454e-15
 center_of_mass_mode = 1
 can_sleep = false
 linear_damp_mode = 1

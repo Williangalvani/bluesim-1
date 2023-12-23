@@ -5,7 +5,7 @@ var underwater_env = load("res://scenery/underwaterEnvironment.tres")
 var surface_env = load("res://scenery/defaultEnvironment.tres")
 # darkest it gets
 @onready var cameras = get_tree().get_nodes_in_group("cameras")
-@onready var surface_altitude = $"../water".global_transform.origin.y
+@onready var surface_altitude = 3.6
 
 var fancy_water
 #@onready var fancy_underwater = $water.get_surface_override_material(0)
@@ -42,11 +42,11 @@ func calculate_buoyancy_and_ballast():
 					buoyancy = 0
 				vehicle.add_force_local_pos(Vector3(0, buoyancy, 0), buoy.transform.origin)
 		else:
-			var buoyancy = min(
-				vehicle.buoyancy,
-				abs(vehicle.buoyancy * (vehicle.position.y - HEIGHT / 3 - surface_altitude))
-			)
-			vehicle.apply_force(vehicle.transform.basis.y * -0.5, Vector3(0, buoyancy, 0))
+			var buoyancy = vehicle.buoyancy
+			if vehicle.transform.origin.y > surface_altitude:
+				buoyancy = 0
+			print("applying," , buoyancy, " to ", vehicle)
+			vehicle.apply_force(Vector3(0, buoyancy, 0),vehicle.transform.basis.y * +0.3)
 		var ballasts = vehicle.find_child("ballasts")
 		if ballasts:
 			var children = ballasts.get_children()

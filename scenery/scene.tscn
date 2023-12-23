@@ -31,7 +31,7 @@ light_energy = 0.19
 shadow_enabled = true
 
 [node name="ConeTwistJoint3D" type="ConeTwistJoint3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00880051, 5.56413, -4.93734)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00880051, 5.60672, -4.93734)
 node_a = NodePath("../boia")
 node_b = NodePath("../pino")
 
@@ -51,11 +51,11 @@ mesh = SubResource("5")
 surface_material_override/0 = SubResource("StandardMaterial3D_nkbt5")
 
 [node name="pino" type="RigidBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.90713, -4.93734)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.94716, -4.93734)
 mass = 2.0
 physics_material_override = SubResource("6")
-linear_damp = 0.993
-angular_damp = 0.994
+linear_damp = 1.313
+angular_damp = 3.61
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="pino"]
 transform = Transform3D(0.0384637, 0, 0, 0, 0.514566, 0, 0, 0, 0.0384637, 5.96817e-05, 0.38323, -0.00120211)

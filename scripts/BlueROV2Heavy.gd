@@ -9,7 +9,7 @@ var start_time = Time.get_ticks_msec()
 var last_velocity = Vector3(0, 0, 0)
 var calculated_acceleration = Vector3(0, 0, 0)
 
-var buoyancy = 50.0 + self.mass * self.gravity_scale  # Newtons
+var buoyancy = 10* self.mass * self.gravity_scale  # Newtons
 var _initial_position = 0
 var phys_time = 0
 
