@@ -234,14 +234,14 @@ func actuate_servo(id, percentage):
 
 		10:
 			if percentage < 0.4:
-				ljoint.set_param(6, 1)
-				rjoint.set_param(6, -1)
+				ljoint.set_motor_target_velocity(1)
+				rjoint.set_motor_target_velocity(1)
 			elif percentage > 0.6:
-				ljoint.set_param(6, -1)
-				rjoint.set_param(6, 1)
+				ljoint.set_motor_target_velocity(-1)
+				rjoint.set_motor_target_velocity(-1)
 			else:
-				ljoint.set_param(6, 0)
-				rjoint.set_param(6, 0)
+				ljoint.set_motor_target_velocity(0)
+				rjoint.set_motor_target_velocity(0)
 
 func _unhandled_input(event):
 	if event is InputEventKey:
@@ -333,11 +333,11 @@ func process_keys():
 		$Camera3D.rotation_degrees.x = max($Camera3D.rotation_degrees.x - 0.5, -45)
 
 	if Input.is_action_pressed("gripper_open"):
-		ljoint.set_param(6, 1)
-		rjoint.set_param(6, -1)
+		ljoint.set_motor_target_velocity(-1)
+		rjoint.set_motor_target_velocity(-1)
 	elif Input.is_action_pressed("gripper_close"):
-		ljoint.set_param(6, -1)
-		rjoint.set_param(6, 1)
+		ljoint.set_motor_target_velocity(1)
+		rjoint.set_motor_target_velocity(1)
 	else:
-		ljoint.set_param(6, 0)
-		rjoint.set_param(6, 0)
+		ljoint.set_motor_target_velocity(0)
+		rjoint.set_motor_target_velocity(0)
