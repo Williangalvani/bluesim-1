@@ -5,7 +5,7 @@ var underwater_env = load("res://scenery/underwaterEnvironment.tres")
 var surface_env = load("res://scenery/defaultEnvironment.tres")
 # darkest it gets
 @onready var cameras = get_tree().get_nodes_in_group("cameras")
-@onready var surface_altitude = 3.6
+@onready var surface_altitude = 3.53
 
 var fancy_water
 #@onready var fancy_underwater = $water.get_surface_override_material(0)
