@@ -185,6 +185,13 @@ func add_force_local(force: Vector3, pos: Vector3):
 	var force_local = self.transform.basis * force
 	self.apply_force(force_local, pos_local)
 
+func add_force_local_if_underwater(force: Vector3, pos: Vector3):
+	if (self.transform.basis * pos).z > 3.5:
+		return
+	var pos_local = self.transform.basis * pos
+	var force_local = self.transform.basis * force
+	self.apply_force(force_local, pos_local)
+
 
 func actuate_servo(id, percentage):
 	if percentage == 0:
@@ -193,21 +200,21 @@ func actuate_servo(id, percentage):
 	var force = (percentage - 0.5) * 2 * -THRUST
 	match id:
 		0:
-			self.add_force_local($t1.transform.basis*Vector3(force,0,0), $t1.position)
+			self.add_force_local_if_underwater($t1.transform.basis*Vector3(force,0,0), $t1.position)
 		1:
-			self.add_force_local($t2.transform.basis*Vector3(force,0,0), $t2.position)
+			self.add_force_local_if_underwater($t2.transform.basis*Vector3(force,0,0), $t2.position)
 		2:
-			self.add_force_local($t3.transform.basis*Vector3(force,0,0), $t3.position)
+			self.add_force_local_if_underwater($t3.transform.basis*Vector3(force,0,0), $t3.position)
 		3:
-			self.add_force_local($t4.transform.basis*Vector3(force,0,0), $t4.position)
+			self.add_force_local_if_underwater($t4.transform.basis*Vector3(force,0,0), $t4.position)
 		4:
-			self.add_force_local($t5.transform.basis*Vector3(force,0,0), $t5.position)
+			self.add_force_local_if_underwater($t5.transform.basis*Vector3(force,0,0), $t5.position)
 		5:
-			self.add_force_local($t6.transform.basis*Vector3(force,0,0), $t6.position)
+			self.add_force_local_if_underwater($t6.transform.basis*Vector3(force,0,0), $t6.position)
 		6:
-			self.add_force_local($t7.transform.basis*Vector3(force,0,0), $t7.position)
+			self.add_force_local_if_underwater($t7.transform.basis*Vector3(force,0,0), $t7.position)
 		7:
-			self.add_force_local($t8.transform.basis*Vector3(force,0,0), $t8.position)
+			self.add_force_local_if_underwater($t8.transform.basis*Vector3(force,0,0), $t8.position)
 		8:
 			$Camera3D.rotation_degrees.x = -45 + 90 * percentage
 		9:
@@ -311,7 +318,7 @@ func process_keys():
 		self.add_force_local(Vector3(THRUST, 0, 0), Vector3(0, -0.05, 0))
 
 	if Input.is_action_pressed("upwards"):
-		self.add_force_local(Vector3(0, THRUST, 0), Vector3(0, -0.05, 0))
+		self.add_force_local_if_underwater(Vector3(0, THRUST, 0), Vector3(0, -0.05, 0))
 	elif Input.is_action_pressed("downwards"):
 		self.add_force_local(Vector3(0, -THRUST, 0), Vector3(0, -0.05, 0))
 
