@@ -3,7 +3,7 @@ extends RigidBody3D
 # Declare member variables here. Examples:
 # var a = 2
 # var b = "text"
-var buoyancy =  2* self.mass * 9.8  # Newtons
+var buoyancy =  3* self.mass * 9.8  # Newtons
 
 
 # Called when the node enters the scene tree for the first time.

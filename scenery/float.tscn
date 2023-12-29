@@ -1,7 +1,7 @@
 [gd_scene load_steps=9 format=3 uid="uid://bfjb2vce6wql2"]
 
-[ext_resource type="Script" path="res://scripts/buoy.gd" id="3"]
-[ext_resource type="Script" path="res://scripts/environment.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/environment.gd" id="1_8ybhf"]
+[ext_resource type="Script" path="res://scripts/buoy.gd" id="2_3idya"]
 
 [sub_resource type="SphereShape3D" id="4"]
 radius = 0.129151
@@ -14,28 +14,31 @@ albedo_color = Color(1, 0, 0, 1)
 [sub_resource type="PhysicsMaterial" id="6"]
 friction = 3.0
 rough = true
-bounce = 1.0
+bounce = 10.0
 absorbent = true
 
-[sub_resource type="BoxMesh" id="7"]
+[sub_resource type="CylinderMesh" id="CylinderMesh_x0fqh"]
 
-[sub_resource type="BoxShape3D" id="9"]
-size = Vector3(0.0336481, 0.438682, 0.0318039)
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_s1gle"]
+height = 0.431292
+radius = 0.0242735
 
 [node name="Node3D" type="Node3D"]
-script = ExtResource("5")
+script = ExtResource("1_8ybhf")
 
-[node name="ConeTwistJoint3D" type="ConeTwistJoint3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00880051, 5.60672, -4.93734)
+[node name="ConeTwistJoint3D" type="JoltConeTwistJoint3D" parent="."]
+swing_limit_enabled = true
+swing_limit_span = 0.0523599
 node_a = NodePath("../boia")
 node_b = NodePath("../pino")
+transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, -0.00880051, 5.60672, -4.93734)
 
 [node name="boia" type="RigidBody3D" parent="." groups=["buoyant"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.71692, -4.93734)
 mass = 2.16
-linear_damp = 0.664
+linear_damp = 2.0
 angular_damp = 0.869
-script = ExtResource("3")
+script = ExtResource("2_3idya")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="boia"]
 shape = SubResource("4")
@@ -50,12 +53,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.94716, -4.93734)
 mass = 2.0
 physics_material_override = SubResource("6")
 linear_damp = 1.313
-angular_damp = 3.61
+angular_damp_mode = 1
+angular_damp = 1000.0
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="pino"]
-transform = Transform3D(0.0384637, 0, 0, 0, 0.514566, 0, 0, 0, 0.0384637, 5.96817e-05, 0.38323, -0.00120211)
-mesh = SubResource("7")
+transform = Transform3D(0.0469218, 0, 0, 0, 0.232389, 0, 0, 0, 0.0476397, -0.00863858, 0.443998, 0.00391483)
+mesh = SubResource("CylinderMesh_x0fqh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="pino"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.422863, 0)
-shape = SubResource("9")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00855663, 0.445378, 0.00483656)
+shape = SubResource("CylinderShape3D_s1gle")

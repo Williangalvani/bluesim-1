@@ -2,7 +2,7 @@
 
 [ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
-[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/scene.tscn" id="2_6fyic"]
+[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/float.tscn" id="2_6fyic"]
 [ext_resource type="Script" path="res://menu/SubViewport.gd" id="2_fvsuw"]
 [ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/InterpolatedCamera.gd" id="4"]
