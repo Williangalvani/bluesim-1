@@ -50,7 +50,7 @@ func get_servos():
 
 	if magic != 18458:
 		return
-	for i in range(0, 15):
+	for i in range(0, 17):
 		buffer.seek(8 + i * 2)
 		actuate_servo(i, (float(buffer.get_u16()) - 1000) / 1000)
 
