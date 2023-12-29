@@ -215,9 +215,9 @@ func actuate_servo(id, percentage):
 			self.add_force_local_if_underwater($t7.transform.basis*Vector3(force,0,0), $t7.position)
 		7:
 			self.add_force_local_if_underwater($t8.transform.basis*Vector3(force,0,0), $t8.position)
-		8:
-			$Camera3D.rotation_degrees.x = -45 + 90 * percentage
-		9:
+		14:
+			$Camera3D.rotation_degrees.x = -45 + 120 * percentage
+		12:
 			percentage -= 0.1
 			percentage = max(0, percentage)
 			$light1.light_energy = percentage * 5
@@ -232,16 +232,13 @@ func actuate_servo(id, percentage):
 				for light in light_glows:
 					self.add_child(light)
 
-		10:
+		8:
 			if percentage < 0.4:
-				ljoint.set_motor_target_velocity(1)
-				rjoint.set_motor_target_velocity(1)
+				ljoint.close()
+				rjoint.close()
 			elif percentage > 0.6:
-				ljoint.set_motor_target_velocity(-1)
-				rjoint.set_motor_target_velocity(-1)
-			else:
-				ljoint.set_motor_target_velocity(0)
-				rjoint.set_motor_target_velocity(0)
+				ljoint.open()
+				rjoint.open()
 
 func _unhandled_input(event):
 	if event is InputEventKey:
@@ -330,14 +327,14 @@ func process_keys():
 	if Input.is_action_pressed("camera_up"):
 		$Camera3D.rotation_degrees.x = min($Camera3D.rotation_degrees.x + 0.5, 45)
 	elif Input.is_action_pressed("camera_down"):
-		$Camera3D.rotation_degrees.x = max($Camera3D.rotation_degrees.x - 0.5, -45)
+		$Camera3D.rotation_degrees.x = 	max($Camera3D.rotation_degrees.x - 0.5, -45)
 
 	if Input.is_action_pressed("gripper_open"):
-		ljoint.set_motor_target_velocity(-1)
-		rjoint.set_motor_target_velocity(-1)
+		ljoint.open()
+		rjoint.open()
 	elif Input.is_action_pressed("gripper_close"):
-		ljoint.set_motor_target_velocity(1)
-		rjoint.set_motor_target_velocity(1)
-	else:
-		ljoint.set_motor_target_velocity(0)
-		rjoint.set_motor_target_velocity(0)
+		ljoint.close()
+		rjoint.close()
+	#else:
+		#ljoint.set_motor_target_velocity(0)
+		#rjoint.set_motor_target_velocity(0)

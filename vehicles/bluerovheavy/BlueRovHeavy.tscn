@@ -1,7 +1,9 @@
-[gd_scene load_steps=24 format=3 uid="uid://d0rv01klybh31"]
+[gd_scene load_steps=26 format=3 uid="uid://d0rv01klybh31"]
 
 [ext_resource type="Script" path="res://scripts/BlueROV2Heavy.gd" id="1"]
+[ext_resource type="Script" path="res://vehicles/bluerovheavy/ljoint.gd" id="1_ox30p"]
 [ext_resource type="PackedScene" uid="uid://d2pk0jdvrv5gh" path="res://vehicles/components/newton.tscn" id="2"]
+[ext_resource type="Script" path="res://vehicles/bluerovheavy/rjoint.gd" id="2_l1kll"]
 [ext_resource type="Material" uid="uid://7tcomo83twb" path="res://vehicles/bluerovheavy/blackmetal.tres" id="2_msiqi"]
 [ext_resource type="Material" path="res://vehicles/components/Plastic black.material" id="3"]
 [ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="4"]
@@ -89,6 +91,7 @@ motor_max_torque = 50.0
 node_a = NodePath("../BlueRov")
 node_b = NodePath("../lClaw")
 transform = Transform3D(0.974437, 0.224662, 9.82028e-09, 0, -4.37114e-08, 1, 0.224662, -0.974437, -4.2594e-08, 0.44739, -0.260608, -0.0336983)
+script = ExtResource("1_ox30p")
 
 [node name="rjoint" type="JoltHingeJoint3D" parent="."]
 limit_enabled = true
@@ -99,6 +102,7 @@ motor_max_torque = 50.0
 node_a = NodePath("../BlueRov")
 node_b = NodePath("../rClaw")
 transform = Transform3D(0.974437, 0.224662, 9.82028e-09, 1.96406e-08, -4.14766e-08, -1, -0.224662, 0.974437, -4.48288e-08, 0.411646, -0.260608, 0.040467)
+script = ExtResource("2_l1kll")
 
 [node name="rClaw" type="RigidBody3D" parent="."]
 transform = Transform3D(0.314291, 0.949327, -4.14964e-08, 0, -4.37114e-08, -1, -0.949327, 0.314291, -1.37381e-08, 0.478544, -0.26198, 0.0687629)
