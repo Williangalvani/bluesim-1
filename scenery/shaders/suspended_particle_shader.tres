@@ -5,7 +5,7 @@
 [resource]
 render_priority = 1
 shader = ExtResource("1_wi2f3")
-shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/albedo = Color(0.756863, 1, 1, 1)
 shader_parameter/specular = 2.08165e-12
 shader_parameter/metallic = 0.0
 shader_parameter/roughness = 0.0

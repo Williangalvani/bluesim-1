@@ -63,11 +63,11 @@ void fragment() {
 	float gr = GodRays(UV, TIME*1.0);
 	vec2 base_uv = UV;
 	vec4 albedo_tex = texture(texture_albedo,base_uv);
-	albedo_tex *= COLOR;
+	albedo_tex *= COLOR*2.0;
 	EMISSION = vec3(1.0,1.0,1.0);
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
-	ALPHA = 100.0* gr * distance_fade(VERTEX, 2, 4) * COLOR.a;
+	ALPHA = 200.0* gr * distance_fade(VERTEX, 2, 4) * COLOR.a;
 	
 }

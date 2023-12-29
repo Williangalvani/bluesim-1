@@ -12,11 +12,9 @@ height = 2.92889
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.171694, 0, 1.83463)
 
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="pool/obstacle/StaticBody3D" index="0"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.149637, 0)
 shape = SubResource("CapsuleShape3D_o1mdx")
 
 [node name="CollisionShape3D3" type="CollisionShape3D" parent="pool/obstacle/StaticBody3D" index="1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.94456, -0.149637, 0)
 shape = SubResource("CapsuleShape3D_o1mdx")
 
 [editable path="pool"]
