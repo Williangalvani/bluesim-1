@@ -219,6 +219,7 @@ shape = SubResource("13")
 
 [node name="light1" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.337544, -0.199193, 0.496962)
+light_energy = 0.0
 light_volumetric_fog_energy = 0.46
 light_size = 0.03
 shadow_enabled = true
@@ -228,8 +229,9 @@ spot_angle_attenuation = 0.96
 
 [node name="light2" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.389553, -0.199193, 0.496962)
+light_energy = 0.0
+light_indirect_energy = 0.0
 light_volumetric_fog_energy = 0.46
-light_size = 0.03
 shadow_enabled = true
 spot_attenuation = 1.06066
 spot_angle = 62.5
@@ -287,26 +289,26 @@ mesh = SubResource("14")
 surface_material_override/0 = ExtResource("6_hjxqs")
 
 [node name="light_glow2" type="MeshInstance3D" parent="BlueRov"]
-transform = Transform3D(-0.0348938, 0, 0, 0, -0.00095478, 0.0345276, 0, 0.00653839, 0.00504197, -0.377187, 0.100628, 0.403364)
+transform = Transform3D(-0.0348938, 0, 0, 0, -0.00095478, 0.0345276, 1.58963e-17, 0.00653839, 0.00504197, -0.377187, 0.100628, 0.403364)
 mesh = SubResource("14")
 surface_material_override/0 = ExtResource("6_hjxqs")
 
 [node name="light_glow3" type="MeshInstance3D" parent="BlueRov"]
-transform = Transform3D(-0.0348938, 0, 0, 0, -0.00215846, 0.0329797, 0, 0.00624525, 0.0113983, 0.374692, -0.23366, 0.411267)
+transform = Transform3D(-0.0348938, 0, 0, 0, -0.00215846, 0.0329797, 1.58963e-17, 0.00624525, 0.0113983, 0.374692, -0.23366, 0.411267)
 mesh = SubResource("14")
 surface_material_override/0 = ExtResource("6_hjxqs")
 
 [node name="light_glow4" type="MeshInstance3D" parent="BlueRov"]
-transform = Transform3D(-0.0348938, 0, 0, 0, -0.00215846, 0.0329797, 0, 0.00624525, 0.0113983, -0.377187, -0.23366, 0.411267)
+transform = Transform3D(-0.0348938, 0, 0, 0, -0.00215846, 0.0329797, 1.58963e-17, 0.00624525, 0.0113983, -0.377187, -0.23366, 0.411267)
 mesh = SubResource("14")
 surface_material_override/0 = ExtResource("6_hjxqs")
 
 [node name="greenled" type="MeshInstance3D" parent="BlueRov"]
-transform = Transform3D(0.00692338, 0, 0, 0, 0.00593798, 0, 0, 0, 0.0118189, 0.0306498, 0.0627247, 0.169972)
+transform = Transform3D(0.00692338, 0, 0, 0, 0.00593798, 0, 3.31675e-18, 0, 0.0118189, 0.0306498, 0.0627247, 0.169972)
 mesh = SubResource("16")
 
 [node name="redled" type="MeshInstance3D" parent="BlueRov"]
-transform = Transform3D(0.00692338, 0, 0, 0, 0.00593798, 0, 0, 0, 0.0118189, 0.0306498, 0.0627247, 0.13759)
+transform = Transform3D(0.00692338, 0, 0, 0, 0.00593798, 0, 3.31675e-18, 0, 0.0118189, 0.0306498, 0.0627247, 0.13759)
 mesh = SubResource("16")
 
 [node name="ping1d" type="RayCast3D" parent="BlueRov"]
@@ -314,9 +316,9 @@ transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 0.0185
 target_position = Vector3(2.08165e-12, -100, 2.08165e-12)
 
 [node name="sonar" parent="BlueRov" instance=ExtResource("6")]
-transform = Transform3D(0.0614213, 0, 0, 0, 0.0614213, 0, 0, 0, 0.0614213, -0.220256, 0.235284, -0.0282408)
+transform = Transform3D(0.0614213, 0, 0, 0, 0.0614213, 0, -3.89933e-17, 0, 0.0614213, -0.220256, 0.235284, -0.0282408)
 mesh = SubResource("21")
 
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="BlueRov"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.79397e-08, 0.0134256, 0.392363)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.98023e-08, 0.0134256, 0.392363)
 shape = SubResource("SphereShape3D_swiu1")

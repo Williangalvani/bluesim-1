@@ -1,0 +1,68 @@
+[gd_scene load_steps=7 format=3 uid="uid://ds67lupctpkdq"]
+
+[ext_resource type="Script" path="res://scenery/misc/button.gd" id="1_o2ei2"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_n6nkk"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_d0s8l"]
+height = 0.398504
+radius = 0.129153
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_thkyr"]
+albedo_color = Color(0.670588, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 0.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_1iigu"]
+height = 0.367282
+radius = 0.0888685
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_3ktrf"]
+radius = 0.133256
+
+[node name="Button" type="Node3D"]
+script = ExtResource("1_o2ei2")
+
+[node name="body" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.38419e-07, -0.0382826, 1.25328)
+
+[node name="bodymesh" type="MeshInstance3D" parent="body"]
+transform = Transform3D(0.258716, 0, 0, 0, -1.13088e-08, -0.258716, 0, 0.258716, -1.13088e-08, 0, 0, -1.23008)
+mesh = SubResource("CylinderMesh_n6nkk")
+
+[node name="bodycollision" type="CollisionShape3D" parent="body"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -1.86265e-08, -1.17218)
+shape = SubResource("CylinderShape3D_d0s8l")
+
+[node name="buttonitself" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.38419e-07, -0.0331225, 0.293117)
+
+[node name="bodymesh" type="MeshInstance3D" parent="buttonitself"]
+transform = Transform3D(0.17771, 0, 0, 0, -7.76796e-09, -0.17771, 0, 0.17771, -7.76796e-09, 0, 0, -0.185857)
+mesh = SubResource("CylinderMesh_n6nkk")
+surface_material_override/0 = SubResource("StandardMaterial3D_thkyr")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="buttonitself"]
+transform = Transform3D(0.999897, -0.00404066, -0.0137913, -0.0138195, -0.0070551, -0.99988, 0.00394289, 0.999967, -0.0071102, 0.00076385, 0.00133359, -0.189035)
+shape = SubResource("CylinderShape3D_1iigu")
+
+[node name="JoltSliderJoint3D" type="JoltSliderJoint3D" parent="."]
+limit_enabled = true
+limit_upper = 0.1
+motor_enabled = true
+motor_target_velocity = 0.1
+motor_max_force = 0.5
+node_a = NodePath("../body")
+node_b = NodePath("../buttonitself")
+transform = Transform3D(1.31134e-07, 0, -1, 0, 1, 0, 1, 0, 1.31134e-07, 0.0135698, -0.0442824, -0.0460613)
+
+[node name="Area3D" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.357982)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00184298, -0.0534583, 0.151046)
+shape = SubResource("SphereShape3D_3ktrf")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
+[connection signal="body_exited" from="Area3D" to="." method="_on_area_3d_body_exited"]

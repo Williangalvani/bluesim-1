@@ -279,7 +279,7 @@ func _unhandled_input(event):
 				$Camera3D.set_current(true)
 
 	if event.is_action("lights_up"):
-		var percentage = min(max(0, $light1.light_energy + 0.1), 5)
+		var percentage = min(max(0, $light1.light_energy + 0.1), 1)
 		print("lights to", percentage)
 		if percentage > 0:
 			for light in light_glows:

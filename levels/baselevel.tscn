@@ -378,21 +378,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.21178, 10.2615, 4.21928)
 script = ExtResource("5")
 
 [node name="BlueRovHeavy" parent="ViewportCamera/SubViewport" instance=ExtResource("9")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.33197, 0)
 
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
-loops = 40
+loops = 100
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(30, -2.62268e-06, -2.62268e-06, -2.62268e-06, -30, -1.04636e-14, -2.62268e-06, 2.39746e-13, -30, 0, 3.59871, 0)
 material_override = ExtResource("7_fte2l")
 mesh = SubResource("PlaneMesh_qvnpa")
-
-[node name="sun" type="DirectionalLight3D" parent="ViewportCamera/SubViewport"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 33.518, 0)
-light_energy = 1.2
-shadow_enabled = true
 
 [node name="SettingsPanel" type="PanelContainer" parent="ViewportCamera"]
 layout_mode = 2

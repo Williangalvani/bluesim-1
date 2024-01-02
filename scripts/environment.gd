@@ -43,7 +43,7 @@ func calculate_buoyancy_and_ballast():
 				vehicle.add_force_local_pos(Vector3(0, buoyancy, 0), buoy.transform.origin)
 		else:
 			var buoyancy = vehicle.buoyancy
-			if vehicle.transform.origin.y > surface_altitude:
+			if vehicle.global_transform.origin.y > surface_altitude:
 				buoyancy = 0
 			vehicle.apply_force(Vector3(0, buoyancy, 0),vehicle.transform.basis.y * +0.3)
 		var ballasts = vehicle.find_child("ballasts")
@@ -86,7 +86,7 @@ func update_fog():
 
 		for camera in cameras:
 			depth = camera.global_transform.origin.y - surface_altitude
-			camera.environment = surface_env if depth > 0 else underwater_env
+			camera.environment = surface_env if depth > 0.2 else underwater_env
 			if depth > 0:
 				camera.cull_mask = 3
 			else:
@@ -94,8 +94,7 @@ func update_fog():
 
 
 func _process(_delta):
-	if "custom" in Globals.active_level:
-		update_fog()
+	update_fog()
 
 
 func _physics_process(_delta):

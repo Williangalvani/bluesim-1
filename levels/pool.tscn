@@ -1,20 +1,121 @@
-[gd_scene load_steps=3 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=12 format=3 uid="uid://kbykm0vwl5c3"]
 
-[ext_resource type="PackedScene" uid="uid://dbqwdfghqw8tn" path="res://blender_sources/pool.blend" id="1_n08pt"]
+[ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
+[ext_resource type="Material" uid="uid://ccisi0op6ivuu" path="res://scenery/shaders/caustic_pool_wall.tres" id="3_8fh1v"]
+[ext_resource type="PackedScene" uid="uid://ds67lupctpkdq" path="res://scenery/misc/button.tscn" id="4_oagsn"]
+[ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_o1mdx"]
-radius = 0.281993
-height = 2.92889
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3rula"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ifx0o"]
+size = Vector3(0.33606, 0.388695, 2.73244)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rtjfd"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ydrio"]
+albedo_color = Color(0.0509804, 0, 0.811765, 1)
+
+[sub_resource type="TextMesh" id="TextMesh_g4try"]
+material = SubResource("StandardMaterial3D_ydrio")
+text = "Press the Button
+to Open the door"
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6nrsx"]
+size = Vector3(1, 1, 2.97754)
+
+[sub_resource type="BoxMesh" id="BoxMesh_4t7nt"]
 
 [node name="pool" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.26858, 0, 0)
 
-[node name="pool" parent="." instance=ExtResource("1_n08pt")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.171694, 0, 1.83463)
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.206868, 0)
+material_override = SubResource("ShaderMaterial_3rula")
+material_overlay = ExtResource("1_81v3v")
+use_collision = true
 
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="pool/obstacle/StaticBody3D" index="0"]
-shape = SubResource("CapsuleShape3D_o1mdx")
+[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.96735, 1.68512, -5.5)
+size = Vector3(26.9347, 4.37024, 26)
 
-[node name="CollisionShape3D3" type="CollisionShape3D" parent="pool/obstacle/StaticBody3D" index="1"]
-shape = SubResource("CapsuleShape3D_o1mdx")
+[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.68741, 3, -0.0961914)
+operation = 2
+size = Vector3(15.1484, 5, 13.1924)
 
-[editable path="pool"]
+[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -5)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.43991, 3.7141, 0.5)
+operation = 2
+size = Vector3(11.8798, 5, 3)
+
+[node name="Button" parent="." instance=ExtResource("4_oagsn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.493484, 2.68389, -1.22841)
+
+[node name="door" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.246898, 1.31587, -0.0780612)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="door"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0188149, 0.610328, 0.631188)
+shape = SubResource("BoxShape3D_ifx0o")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="door"]
+transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 0.606847, 0.631351)
+mesh = SubResource("BoxMesh_rtjfd")
+surface_material_override/0 = ExtResource("3_8fh1v")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="door"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0188149, 1.36408, 0.631188)
+shape = SubResource("BoxShape3D_ifx0o")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="door"]
+transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 1.3685, 0.631351)
+mesh = SubResource("BoxMesh_rtjfd")
+surface_material_override/0 = ExtResource("3_8fh1v")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="door"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0188149, 2.10498, 0.631188)
+shape = SubResource("BoxShape3D_ifx0o")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="door"]
+transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 2.11175, 0.631351)
+mesh = SubResource("BoxMesh_rtjfd")
+surface_material_override/0 = ExtResource("3_8fh1v")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="door"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 0.615751, 0.540749)
+mesh = SubResource("TextMesh_g4try")
+
+[node name="cageDoorJoint" type="JoltSliderJoint3D" parent="."]
+limit_enabled = true
+limit_upper = 0.34
+limit_lower = -1.26
+limit_spring_enabled = true
+motor_enabled = true
+motor_max_force = 100.0
+node_a = NodePath("../door")
+node_b = NodePath("../StaticBody3D")
+transform = Transform3D(0, 4.37114e-08, 1, 1, -4.37114e-08, 0, 4.37114e-08, 1, -4.37114e-08, -7.641e-08, 2.71518, 0.649459)
+script = ExtResource("5_01oyj")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.64552, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.98877)
+shape = SubResource("BoxShape3D_6nrsx")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.874137, 0.119699, -0.470698, 0.48568, -0.215438, 0.847173, -2.91864e-08, -0.969154, -0.246458, 0, 38.52, -1.39321e-06)
+light_energy = 1.15
+shadow_enabled = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(10.7626, -72.6666, 0, 6.50909, 120.152, 0, 0, 0, 140.417, -23.8356, 39.4116, 0)
+visible = false
+mesh = SubResource("BoxMesh_4t7nt")
+surface_material_override/0 = ExtResource("1_81v3v")
+
+[connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]
