@@ -1,6 +1,5 @@
-[gd_scene load_steps=9 format=3 uid="uid://bfjb2vce6wql2"]
+[gd_scene load_steps=10 format=3 uid="uid://bfjb2vce6wql2"]
 
-[ext_resource type="Script" path="res://scripts/environment.gd" id="1_8ybhf"]
 [ext_resource type="Script" path="res://scripts/buoy.gd" id="2_3idya"]
 
 [sub_resource type="SphereShape3D" id="4"]
@@ -23,8 +22,12 @@ absorbent = true
 height = 0.431292
 radius = 0.0242735
 
+[sub_resource type="SphereMesh" id="SphereMesh_krtvj"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_n2ue1"]
+radius = 0.0525692
+
 [node name="Node3D" type="Node3D"]
-script = ExtResource("1_8ybhf")
 
 [node name="ConeTwistJoint3D" type="JoltConeTwistJoint3D" parent="."]
 swing_limit_enabled = true
@@ -63,3 +66,11 @@ mesh = SubResource("CylinderMesh_x0fqh")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="pino"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00855663, 0.445378, 0.00483656)
 shape = SubResource("CylinderShape3D_s1gle")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="pino"]
+transform = Transform3D(0.102862, 0, 0, 0, 0.102862, 0, 0, 0, 0.102862, -0.00949386, 0.192225, 0.00415325)
+mesh = SubResource("SphereMesh_krtvj")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="pino"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0101709, 0.193475, 0.00126314)
+shape = SubResource("SphereShape3D_n2ue1")

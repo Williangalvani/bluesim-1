@@ -1,14 +1,15 @@
-[gd_scene load_steps=19 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=20 format=3 uid="uid://clbt7xl26oubb"]
 
 [ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
-[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/float.tscn" id="2_6fyic"]
+[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="2_6fyic"]
 [ext_resource type="Script" path="res://menu/SubViewport.gd" id="2_fvsuw"]
 [ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/InterpolatedCamera.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/targetPos.gd" id="5"]
 [ext_resource type="Script" path="res://levels/tether.gd" id="5_ka5gl"]
 [ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
+[ext_resource type="Script" path="res://scripts/environment.gd" id="6_tkhm0"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
 [ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="8_7ppp8"]
@@ -362,6 +363,7 @@ render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
 
 [node name="scene" parent="ViewportCamera/SubViewport" instance=ExtResource("2_6fyic")]
+script = ExtResource("6_tkhm0")
 
 [node name="playerCamera" type="Node3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.7902, 0)

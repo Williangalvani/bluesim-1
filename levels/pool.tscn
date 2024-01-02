@@ -1,9 +1,10 @@
-[gd_scene load_steps=12 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=13 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Material" uid="uid://ccisi0op6ivuu" path="res://scenery/shaders/caustic_pool_wall.tres" id="3_8fh1v"]
 [ext_resource type="PackedScene" uid="uid://ds67lupctpkdq" path="res://scenery/misc/button.tscn" id="4_oagsn"]
 [ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
+[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_3rula"]
 
@@ -117,5 +118,9 @@ transform = Transform3D(10.7626, -72.6666, 0, 6.50909, 120.152, 0, 0, 0, 140.417
 visible = false
 mesh = SubResource("BoxMesh_4t7nt")
 surface_material_override/0 = ExtResource("1_81v3v")
+
+[node name="Node3D" parent="." instance=ExtResource("5_mjvom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.93207, 0.706868, 1.37578)
+script = null
 
 [connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]
