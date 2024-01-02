@@ -1,14 +1,14 @@
-[gd_scene load_steps=10 format=3 uid="uid://bfjb2vce6wql2"]
+[gd_scene load_steps=10 format=3 uid="uid://dykuk62nuk0bf"]
 
-[ext_resource type="Script" path="res://scenery/misc/buoy.gd" id="1_xdib7"]
+[ext_resource type="Script" path="res://scripts/buoyheavy.gd" id="1_w0oog"]
 
 [sub_resource type="SphereShape3D" id="4"]
-radius = 0.129151
+radius = 0.0739091
 
 [sub_resource type="SphereMesh" id="5"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nkbt5"]
-albedo_color = Color(1, 0, 0, 1)
+albedo_color = Color(0.0705882, 0.0980392, 0.811765, 1)
 
 [sub_resource type="PhysicsMaterial" id="6"]
 friction = 3.0
@@ -36,18 +36,19 @@ node_a = NodePath("../boia")
 node_b = NodePath("../pino")
 transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, -0.00880051, 0.192896, 0.0157247)
 
-[node name="boia" type="RigidBody3D" parent="." groups=["buoyant", "red_buoy"]]
+[node name="boia" type="RigidBody3D" parent="." groups=["buoyant"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.303096, 0.0157247)
 mass = 2.16
-linear_damp = 2.0
+linear_damp = 1.0
 angular_damp = 0.869
-script = ExtResource("1_xdib7")
+script = ExtResource("1_w0oog")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="boia"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.012017, -0.0215679, 2.98023e-08)
 shape = SubResource("4")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="boia"]
-transform = Transform3D(0.236609, 0, 0, 0, 0.236609, 0, 0, 0, 0.236609, 0, 0, 0)
+transform = Transform3D(0.148141, 0, 0, 0, 0.148141, 0, 0, 0, 0.148141, -0.012017, -0.0215679, 2.98023e-08)
 mesh = SubResource("5")
 surface_material_override/0 = SubResource("StandardMaterial3D_nkbt5")
 
@@ -57,7 +58,7 @@ mass = 2.0
 physics_material_override = SubResource("6")
 linear_damp = 1.313
 angular_damp_mode = 1
-angular_damp = 1000.0
+angular_damp = 0.5
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="pino"]
 transform = Transform3D(0.0469218, 0, 0, 0, 0.232389, 0, 0, 0, 0.0476397, -0.00863858, 0.443998, 0.00391483)

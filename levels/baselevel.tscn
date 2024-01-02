@@ -1,15 +1,13 @@
-[gd_scene load_steps=20 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=18 format=3 uid="uid://clbt7xl26oubb"]
 
 [ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
-[ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="2_6fyic"]
 [ext_resource type="Script" path="res://menu/SubViewport.gd" id="2_fvsuw"]
 [ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/InterpolatedCamera.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/targetPos.gd" id="5"]
 [ext_resource type="Script" path="res://levels/tether.gd" id="5_ka5gl"]
 [ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
-[ext_resource type="Script" path="res://scripts/environment.gd" id="6_tkhm0"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
 [ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="8_7ppp8"]
@@ -52,10 +50,10 @@ enum Freelook_Modes {MOUSE, INPUT_ACTION, MOUSE_AND_INPUT_ACTION}
 @export var local = true
 
 # Input Actions
-@export var rotate_left_action = \"\"
-@export var rotate_right_action = \"\"
-@export var rotate_up_action = \"\"
-@export var rotate_down_action = \"\"
+@export var rotate_left_action = \"rotate_left\"
+@export var rotate_right_action = \"rotate_right\"
+@export var rotate_up_action = \"rotate_up\"
+@export var rotate_down_action = \"rotate_down\"
 @export var forward_action = \"player_up\"
 @export var backward_action = \"player_down\"
 @export var left_action = \"player_left\"
@@ -362,9 +360,6 @@ size = Vector2i(1280, 720)
 render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
 
-[node name="scene" parent="ViewportCamera/SubViewport" instance=ExtResource("2_6fyic")]
-script = ExtResource("6_tkhm0")
-
 [node name="playerCamera" type="Node3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.7902, 0)
 script = SubResource("1")
@@ -544,7 +539,6 @@ offset_bottom = 1.36035
 
 [node name="UdpH264Streamer" type="UdpH264Streamer" parent="."]
 
-[connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/fancyWaterToggle" to="ViewportCamera/SubViewport/scene" method="_on_fancy_water_toggle_toggled"]
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/Ping360Toggle" to="Ping360Viewport" method="_on_Ping360Toggle_toggled"]
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/StreamingToggle" to="." method="_on_streaming_toggle_toggled"]
 [connection signal="value_changed" from="ViewportCamera/SettingsPanel/VBoxContainer/physicsRateSlider" to="ViewportCamera/SettingsPanel" method="_on_HSlider_value_changed"]

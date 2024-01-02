@@ -1,8 +1,11 @@
-[gd_resource type="ShaderMaterial" load_steps=11 format=3 uid="uid://cudkycx02ps38"]
+[gd_scene load_steps=18 format=3 uid="uid://bmu2nklfby35h"]
 
-[ext_resource type="Texture2D" uid="uid://bj45lfhomrpqr" path="res://blender_sources/materials/pool_tiles_albedo.png" id="1_o86sj"]
-[ext_resource type="Texture2D" uid="uid://7xm0omqxmkdx" path="res://blender_sources/materials/pool_tiles_metal.exr" id="2_43n1l"]
-[ext_resource type="Texture2D" uid="uid://bf3rh8mgycrjv" path="res://blender_sources/materials/pool_tiles_normal.png" id="3_yq56a"]
+[ext_resource type="Texture2D" uid="uid://bj45lfhomrpqr" path="res://blender_sources/materials/pool_tiles_albedo.png" id="1_12gy7"]
+[ext_resource type="Script" path="res://scenery/misc/red_basket_area.gd" id="1_cuia8"]
+[ext_resource type="Texture2D" uid="uid://7xm0omqxmkdx" path="res://blender_sources/materials/pool_tiles_metal.exr" id="2_vsoh6"]
+[ext_resource type="Texture2D" uid="uid://bf3rh8mgycrjv" path="res://blender_sources/materials/pool_tiles_normal.png" id="3_na0f4"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3rula"]
 
 [sub_resource type="Shader" id="Shader_40r7k"]
 code = "// NOTE: Shader automatically converted from Godot Engine 4.2.1.stable's StandardMaterial3D.
@@ -166,7 +169,7 @@ invert = true
 seamless = true
 noise = SubResource("FastNoiseLite_jjflk")
 
-[resource]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qynjm"]
 render_priority = 0
 shader = SubResource("Shader_40r7k")
 shader_parameter/worldHeight = 2.01
@@ -179,7 +182,7 @@ shader_parameter/roughness = 0.3
 shader_parameter/UVScale = 4.0
 shader_parameter/subdiv_res = 1024.0
 shader_parameter/NormalMapSampleRange = 10.0
-shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/albedo = Color(0.588235, 0, 0.152941, 1)
 shader_parameter/point_size = 4.92
 shader_parameter/metallic_texture_channel = null
 shader_parameter/metallic = 0.33
@@ -204,9 +207,66 @@ shader_parameter/fadeOffBottomBeginning = 5.0
 shader_parameter/fadeOffBottomEnd = 10.0
 shader_parameter/waveNoise = SubResource("NoiseTexture2D_qolo7")
 shader_parameter/waveNoiseNormalMap = SubResource("NoiseTexture2D_qolo7")
-shader_parameter/texture_albedo = ExtResource("1_o86sj")
-shader_parameter/texture_metallic = ExtResource("2_43n1l")
+shader_parameter/texture_metallic = ExtResource("2_vsoh6")
 shader_parameter/texture_roughness = SubResource("GradientTexture2D_opq05")
-shader_parameter/texture_normal = ExtResource("3_yq56a")
-shader_parameter/texture_heightmap = ExtResource("1_o86sj")
+shader_parameter/texture_normal = ExtResource("3_na0f4")
+shader_parameter/texture_heightmap = ExtResource("1_12gy7")
 shader_parameter/TopColorRange = SubResource("GradientTexture1D_ao5sd")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n4562"]
+albedo_color = Color(0.729412, 0.0313726, 0.0313726, 1)
+
+[sub_resource type="TextMesh" id="TextMesh_0y18k"]
+text = "Place red buoys in here"
+depth = 0.02
+
+[sub_resource type="TextMesh" id="TextMesh_8wcir"]
+text = "0/3
+"
+depth = 0.02
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_bagde"]
+height = 0.508025
+radius = 0.805208
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_cuia8")
+
+[node name="redBasketArea" type="CSGCombiner3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.206868, 0)
+material_override = SubResource("ShaderMaterial_3rula")
+material_overlay = SubResource("ShaderMaterial_qynjm")
+use_collision = true
+
+[node name="CSGSphere3D" type="CSGSphere3D" parent="redBasketArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.167989, 0.835475, 0.0232449)
+material_override = SubResource("StandardMaterial3D_n4562")
+radius = 1.0
+radial_segments = 21
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="redBasketArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.338539, -0.395115, -0.0712051)
+operation = 2
+size = Vector3(3.04736, 2.50476, 2.61792)
+
+[node name="CSGSphere3D2" type="CSGSphere3D" parent="redBasketArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.167989, 0.835475, 0.0232449)
+operation = 2
+radius = 0.9
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.575007, 0, 0, 0, 0.575007, 0, 0, 0, 0.575007, 0.160268, 1.30559, 1.06792)
+mesh = SubResource("TextMesh_0y18k")
+
+[node name="countMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.575007, 0, 0, 0, 0.575007, 0, 0, 0, 0.575007, 0.160268, 1.19913, 1.06792)
+mesh = SubResource("TextMesh_8wcir")
+
+[node name="Area3D" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15864, 1.291, 0.0458041)
+shape = SubResource("CylinderShape3D_bagde")
+
+[connection signal="body_entered" from="Area3D" to="." method="_on_area_3d_body_entered"]
+[connection signal="body_exited" from="Area3D" to="." method="_on_area_3d_body_exited"]
