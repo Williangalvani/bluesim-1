@@ -5,17 +5,23 @@ const SECTION = preload("res://rope/section.tscn")
 const LINK = preload("res://rope/joint.tscn")
 
 var section_length = Vector3(-0.145,0,0)
-@export var loops = 1
+@export var straight_loops = 1
+@export var coiled_loops = 20
 var vehicle
 
 func _ready():
 	var parent = get_tree().get_first_node_in_group("vehicles")
-	for i in range (loops):
+	for i in range (straight_loops):
 		var child = addSection(parent, i)
 		addLink(parent, child, i)
 		parent = child
 		
-func addSection(_parent, i):
+	#for i in range (coiled_loops):
+		#var child = addSection(parent, i, i * 90)
+		#addLink(parent, child, i)
+		#parent = child
+		#
+func addSection(_parent, i, angle = 0):
 	var section = SECTION.instantiate()
 	add_child(section)
 	section.global_position = self.global_position + section_length * (i+0.5)
