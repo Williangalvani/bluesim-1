@@ -54,7 +54,6 @@ surface_material_override/0 = SubResource("StandardMaterial3D_nkbt5")
 
 [node name="pino" type="RigidBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.466664, 0.0157247)
-mass = 2.0
 physics_material_override = SubResource("6")
 linear_damp = 1.313
 angular_damp_mode = 1
