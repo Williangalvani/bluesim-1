@@ -141,7 +141,7 @@ void light() {
 			}
 	}
 	else{
-		DIFFUSE_LIGHT += clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION * LIGHT_COLOR;
+		DIFFUSE_LIGHT += 0.5*clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION * LIGHT_COLOR;
 	}
 }"
 
@@ -195,7 +195,7 @@ shader_parameter/uv2_scale = Vector3(1, 1, 1)
 shader_parameter/uv2_offset = Vector3(0, 0, 0)
 shader_parameter/AlbedoColor = Color(0.878431, 0.878431, 0.878431, 1)
 shader_parameter/DepthsColor = Color(0.870588, 0.870588, 0.870588, 1)
-shader_parameter/LightPower = 1.0
+shader_parameter/LightPower = -2.72
 shader_parameter/LightStrength = 0.01
 shader_parameter/ShadowOpacity = 0.8
 shader_parameter/ShadowStrength = 0.45

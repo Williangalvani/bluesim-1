@@ -220,7 +220,7 @@ shape = SubResource("13")
 [node name="light1" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.337544, -0.199193, 0.496962)
 light_energy = 0.0
-light_volumetric_fog_energy = 0.46
+light_volumetric_fog_energy = 10.0
 light_size = 0.03
 shadow_enabled = true
 spot_attenuation = 1.06066
@@ -231,7 +231,7 @@ spot_angle_attenuation = 0.96
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.389553, -0.199193, 0.496962)
 light_energy = 0.0
 light_indirect_energy = 0.0
-light_volumetric_fog_energy = 0.46
+light_volumetric_fog_energy = 10.0
 shadow_enabled = true
 spot_attenuation = 1.06066
 spot_angle = 62.5

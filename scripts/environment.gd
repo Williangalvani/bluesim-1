@@ -18,7 +18,6 @@ func _ready():
 	set_physics_process(true)
 	update_fog()
 	_on_fancy_water_toggle_toggled(false)
-	underwater_env.fog_enabled = true
 
 
 func calculate_buoyancy_and_ballast():

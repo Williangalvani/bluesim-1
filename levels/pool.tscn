@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=25 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
@@ -7,11 +7,11 @@
 [ext_resource type="PackedScene" uid="uid://ds67lupctpkdq" path="res://scenery/misc/button.tscn" id="4_oagsn"]
 [ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
 [ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
+[ext_resource type="Texture2D" uid="uid://cw2jo5xbteqdu" path="res://addons/controller_icons/assets/xbox360/rb.png" id="6_sqcjb"]
+[ext_resource type="Texture2D" uid="uid://bamrmda3in3qq" path="res://addons/controller_icons/assets/xbox360/lb.png" id="7_rcwf6"]
 [ext_resource type="PackedScene" uid="uid://cxacf0xgo7kq5" path="res://blender_sources/pool_ladder.blend" id="9_rtdlm"]
 [ext_resource type="PackedScene" uid="uid://dykuk62nuk0bf" path="res://scenery/misc/floatHeavy.tscn" id="10_ivl5n"]
 [ext_resource type="Texture2D" uid="uid://d1mr028oy6oc0" path="res://blender_sources/eliot.png" id="10_t7mob"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_3rula"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ifx0o"]
 size = Vector3(0.33606, 0.388695, 2.73244)
@@ -23,8 +23,24 @@ albedo_color = Color(0.0509804, 0, 0.811765, 1)
 
 [sub_resource type="TextMesh" id="TextMesh_g4try"]
 material = SubResource("StandardMaterial3D_ydrio")
-text = "Press the Button
-to Open the door"
+text = "Press the red button
+to open the door"
+
+[sub_resource type="TextMesh" id="TextMesh_50nbi"]
+material = SubResource("StandardMaterial3D_ydrio")
+text = "Press
+to tilt the camera"
+horizontal_alignment = 0
+
+[sub_resource type="QuadMesh" id="QuadMesh_v1kub"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m2817"]
+transparency = 1
+albedo_texture = ExtResource("6_sqcjb")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_88yu7"]
+transparency = 1
+albedo_texture = ExtResource("7_rcwf6")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_6nrsx"]
 size = Vector3(1, 1, 2.97754)
@@ -43,13 +59,12 @@ script = ExtResource("1_yjnbp")
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.206868, 0)
-material_override = SubResource("ShaderMaterial_3rula")
 material_overlay = ExtResource("1_81v3v")
 use_collision = true
 
 [node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.96735, -0.837554, -5.5)
-size = Vector3(26.9347, 9.41559, 26)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.2411, -0.837554, -5.5)
+size = Vector3(51.3516, 9.41559, 26)
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.68741, 1.80322, -0.0961914)
@@ -104,8 +119,22 @@ mesh = SubResource("BoxMesh_rtjfd")
 surface_material_override/0 = ExtResource("3_8fh1v")
 
 [node name="MeshInstance3D4" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 0.615751, 0.540749)
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 1.3782, 0.540749)
 mesh = SubResource("TextMesh_g4try")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="door"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 0.622054, -0.12207)
+mesh = SubResource("TextMesh_50nbi")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="door"]
+transform = Transform3D(-1.19723e-08, 0, -0.273894, 0, 0.273894, 0, 0.273894, 0, -1.19723e-08, -0.18804, 0.713826, 0.819137)
+mesh = SubResource("QuadMesh_v1kub")
+surface_material_override/0 = SubResource("StandardMaterial3D_m2817")
+
+[node name="MeshInstance3D7" type="MeshInstance3D" parent="door"]
+transform = Transform3D(-1.19723e-08, 0, -0.273894, 0, 0.273894, 0, 0.273894, 0, -1.19723e-08, -0.182434, 0.716743, 0.481267)
+mesh = SubResource("QuadMesh_v1kub")
+surface_material_override/0 = SubResource("StandardMaterial3D_88yu7")
 
 [node name="cageDoorJoint" type="JoltSliderJoint3D" parent="."]
 limit_enabled = true

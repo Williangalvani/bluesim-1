@@ -1,6 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://nxhytyejyscn"]
+[gd_scene load_steps=6 format=3 uid="uid://nxhytyejyscn"]
 
 [ext_resource type="Script" path="res://rope/section.gd" id="1_hhk5k"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_xlec7"]
+friction = 0.0
+absorbent = true
 
 [sub_resource type="CapsuleShape3D" id="1"]
 margin = 0.001
@@ -22,7 +26,8 @@ radial_segments = 6
 [node name="section" type="RigidBody3D"]
 transform = Transform3D(-4.37114e-08, 1, 4.37114e-08, 0, -4.37114e-08, 1, 1, 4.37114e-08, 1.91069e-15, 0, 0, 0)
 mass = 0.1
-gravity_scale = 0.01
+physics_material_override = SubResource("PhysicsMaterial_xlec7")
+gravity_scale = 0.05
 continuous_cd = true
 angular_damp = 1.0
 script = ExtResource("1_hhk5k")
