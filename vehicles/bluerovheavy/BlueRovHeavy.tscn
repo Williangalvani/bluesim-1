@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3 uid="uid://d0rv01klybh31"]
+[gd_scene load_steps=39 format=3 uid="uid://d0rv01klybh31"]
 
 [ext_resource type="Script" path="res://scripts/BlueROV2Heavy.gd" id="1"]
 [ext_resource type="Script" path="res://vehicles/bluerovheavy/ljoint.gd" id="1_ox30p"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://btr1l5hx0wqm2" path="res://vehicles/components/ping360.tscn" id="6"]
 [ext_resource type="Material" uid="uid://dyoxl3tmy5jyu" path="res://vehicles/bluerovheavy/lights.tres" id="6_hjxqs"]
 [ext_resource type="Material" uid="uid://d1ycf6y3di02h" path="res://scenery/shaders/suspended_particle_shader.tres" id="9_tkchf"]
+[ext_resource type="Texture2D" uid="uid://cw4vusa7mtobl" path="res://scenery/shaders/shader_textures/white-alpha-fix.png" id="10_o65lm"]
 
 [sub_resource type="PhysicsMaterial" id="1"]
 friction = 10.0
@@ -96,6 +97,37 @@ emission_curve = SubResource("CurveTexture_kdor4")
 [sub_resource type="QuadMesh" id="QuadMesh_xcnml"]
 material = ExtResource("9_tkchf")
 size = Vector2(1, 10)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ds80h"]
+transparency = 1
+blend_mode = 1
+depth_draw_mode = 2
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("10_o65lm")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="Curve" id="Curve_mylu8"]
+_data = [Vector2(0, 0.0073266), 0.0, 0.0, 0, 0, Vector2(0.144509, 1), 0.0, 0.0, 0, 0, Vector2(0.89788, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[sub_resource type="CurveTexture" id="CurveTexture_hrjyk"]
+curve = SubResource("Curve_mylu8")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_jbk4c"]
+emission_shape = 3
+emission_box_extents = Vector3(1, 1, 1)
+gravity = Vector3(2.08165e-12, 2.08165e-12, 2.08165e-12)
+scale_min = 0.5
+scale_max = 2.0
+alpha_curve = SubResource("CurveTexture_hrjyk")
+hue_variation_min = 1.0
+hue_variation_max = 1.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_8yvbp"]
+size = Vector2(0.01, 0.01)
 
 [sub_resource type="CylinderMesh" id="14"]
 
@@ -229,7 +261,7 @@ spot_angle_attenuation = 0.96
 
 [node name="light2" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.389553, -0.199193, 0.496962)
-light_energy = 0.0
+light_energy = 1.39
 light_indirect_energy = 0.0
 light_volumetric_fog_energy = 10.0
 shadow_enabled = true
@@ -276,6 +308,17 @@ randomness = 0.3
 transform_align = 1
 process_material = SubResource("ParticleProcessMaterial_rtb5u")
 draw_pass_1 = SubResource("QuadMesh_xcnml")
+
+[node name="GPUParticles3D2" type="GPUParticles3D" parent="BlueRov/bluerov cleaned decimated2"]
+transform = Transform3D(-8.74228e-08, 1.74846e-07, 2, 0, -2, 1.74846e-07, 2, 7.64275e-15, 8.74228e-08, -0.639294, -0.117958, 3.51955)
+material_override = SubResource("StandardMaterial3D_ds80h")
+amount = 5000
+lifetime = 10.0
+explosiveness = 0.05
+randomness = 0.3
+visibility_aabb = AABB(-3.94601, -1.33526, -1.8542, 6.9633, 2.67052, 3.70839)
+process_material = SubResource("ParticleProcessMaterial_jbk4c")
+draw_pass_1 = SubResource("QuadMesh_8yvbp")
 
 [node name="scatterlight" type="OmniLight3D" parent="BlueRov"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.00951934, 0.766427)

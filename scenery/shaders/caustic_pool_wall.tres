@@ -142,7 +142,7 @@ void light() {
 			}
 	}
 	else{
-		DIFFUSE_LIGHT += clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION * LIGHT_COLOR;
+		DIFFUSE_LIGHT += 0.3*clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION * LIGHT_COLOR;
 	}
 }"
 

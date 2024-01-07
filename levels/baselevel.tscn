@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=17 format=3 uid="uid://clbt7xl26oubb"]
 
 [ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
@@ -10,7 +10,6 @@
 [ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
-[ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="8_7ppp8"]
 [ext_resource type="PackedScene" uid="uid://d0rv01klybh31" path="res://vehicles/bluerovheavy/BlueRovHeavy.tscn" id="9"]
 
 [sub_resource type="GDScript" id="1"]
@@ -338,7 +337,6 @@ render_target_update_mode = 0
 process_mode = 1
 transform = Transform3D(-0.995028, 2.44187e-09, 0.0995974, 0.0391301, 0.919589, 0.390929, -0.0915886, 0.392883, -0.915016, -1.29315, 0.471191, 0.969824)
 cull_mask = 1048573
-environment = ExtResource("8_7ppp8")
 current = true
 far = 497.4
 script = ExtResource("4")
@@ -380,7 +378,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.33197, 0)
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
-straight_loops = 250
+straight_loops = 200
 coiled_loops = 0
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]

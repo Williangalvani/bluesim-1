@@ -83,13 +83,13 @@ func update_fog():
 		#$sun.light_energy = max(0.3 - 0.5 * deep_factor, 0)
 		#underwater_env.background_sky.sky_energy = max(5.0 - 5 * deep_factor, 0.0)
 
-		for camera in cameras:
-			depth = camera.global_transform.origin.y - surface_altitude
-			camera.environment = surface_env if depth > 0.2 else underwater_env
-			if depth > 0:
-				camera.cull_mask = 3
-			else:
-				camera.cull_mask = 5
+		#for camera in cameras:
+			#depth = camera.global_transform.origin.y - surface_altitude
+			#camera.environment = surface_env if depth > 0.2 else underwater_env
+			#if depth > 0:
+				#camera.cull_mask = 3
+			#else:
+				#camera.cull_mask = 5
 
 
 func _process(_delta):
