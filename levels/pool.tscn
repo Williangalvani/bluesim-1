@@ -1,7 +1,8 @@
-[gd_scene load_steps=25 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=28 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
+[ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="2_1wm7m"]
 [ext_resource type="Material" uid="uid://ccisi0op6ivuu" path="res://scenery/shaders/caustic_pool_wall.tres" id="3_8fh1v"]
 [ext_resource type="PackedScene" uid="uid://bmu2nklfby35h" path="res://scenery/misc/red_basket_area.tscn" id="3_yqncf"]
 [ext_resource type="PackedScene" uid="uid://ds67lupctpkdq" path="res://scenery/misc/button.tscn" id="4_oagsn"]
@@ -53,9 +54,20 @@ size = Vector3(1, 1, 2.97754)
 transparency = 1
 albedo_texture = ExtResource("10_t7mob")
 
+[sub_resource type="FogMaterial" id="FogMaterial_fnnq2"]
+albedo = Color(0.0509804, 0.0509804, 0.0509804, 1)
+
+[sub_resource type="FogMaterial" id="FogMaterial_nuaoi"]
+density = 0.5
+albedo = Color(0.356863, 0.709804, 0.772549, 1)
+emission = Color(0.270588, 0.54902, 0.756863, 1)
+
 [node name="pool" type="Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.26858, 0, 0)
 script = ExtResource("1_yjnbp")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("2_1wm7m")
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.206868, 0)
@@ -191,5 +203,15 @@ transform = Transform3D(-4.37114e-08, -8.74228e-08, -1, 0, -1, 8.74228e-08, -1, 
 transform = Transform3D(0.454271, 0, 0, 0, 0.454271, 0, 0, 0, 0.454271, 14.5794, 2.25338, -5.88484)
 mesh = SubResource("QuadMesh_id2ev")
 surface_material_override/0 = SubResource("StandardMaterial3D_cobvb")
+
+[node name="FogVolume" type="FogVolume" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.88894, -0.773578, 0)
+size = Vector3(18.1184, 3.30714, 2)
+material = SubResource("FogMaterial_fnnq2")
+
+[node name="FogVolume2" type="FogVolume" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.82819, -0.773578, 0)
+size = Vector3(21.0769, 9.88588, 14.4267)
+material = SubResource("FogMaterial_nuaoi")
 
 [connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]
