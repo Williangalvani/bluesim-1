@@ -77,9 +77,9 @@ operation = 2
 size = Vector3(11.8798, 5, 3)
 
 [node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.50777, 0.163656, -6.6867)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.36351, -0.67631, -0.113237)
 operation = 2
-size = Vector3(0.657166, 0.655762, 0.622498)
+size = Vector3(13.2265, 2.33569, 2.39475)
 
 [node name="redBasketArea" parent="." instance=ExtResource("3_yqncf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.90856, 2.02227, -4.12708)
