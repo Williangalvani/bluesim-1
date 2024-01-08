@@ -25,6 +25,7 @@ radial_segments = 6
 
 [node name="section" type="RigidBody3D"]
 transform = Transform3D(-4.37114e-08, 1, 4.37114e-08, 0, -4.37114e-08, 1, 1, 4.37114e-08, 1.91069e-15, 0, 0, 0)
+collision_priority = 5.0
 mass = 0.1
 physics_material_override = SubResource("PhysicsMaterial_xlec7")
 gravity_scale = 0.05
