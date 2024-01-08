@@ -18,7 +18,7 @@ void vertex() {
 	//MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(1.0, 0.0, 0.0, 0.0),vec4(0.0, 1.0/length(WORLD_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0),vec4(0.0, 0.0, 0.0 ,1.0));
 }
 
-const int MAX_ITER = 5;
+const int MAX_ITER = 2;
 // perf increase for god ray, eliminates Y
 float causticX(float x, float power, float gtime)
 {
