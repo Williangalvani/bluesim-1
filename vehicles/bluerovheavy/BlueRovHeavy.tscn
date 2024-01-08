@@ -1,4 +1,4 @@
-[gd_scene load_steps=39 format=3 uid="uid://d0rv01klybh31"]
+[gd_scene load_steps=40 format=3 uid="uid://d0rv01klybh31"]
 
 [ext_resource type="Script" path="res://scripts/BlueROV2Heavy.gd" id="1"]
 [ext_resource type="Script" path="res://vehicles/bluerovheavy/ljoint.gd" id="1_ox30p"]
@@ -98,25 +98,100 @@ emission_curve = SubResource("CurveTexture_kdor4")
 material = ExtResource("9_tkchf")
 size = Vector2(1, 10)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ds80h"]
-transparency = 1
-blend_mode = 1
-depth_draw_mode = 2
-vertex_color_use_as_albedo = true
-albedo_texture = ExtResource("10_o65lm")
-billboard_mode = 3
-particles_anim_h_frames = 1
-particles_anim_v_frames = 1
-particles_anim_loop = false
+[sub_resource type="Shader" id="Shader_msdmn"]
+code = "// NOTE: Shader automatically converted from Godot Engine 4.2.1.stable's StandardMaterial3D.
+
+shader_type spatial;
+render_mode blend_add,depth_draw_never,cull_back,diffuse_burley,specular_schlick_ggx;
+uniform vec4 albedo : source_color;
+uniform sampler2D texture_albedo : source_color,filter_linear_mipmap,repeat_enable;
+uniform float point_size : hint_range(0,128);
+uniform float roughness : hint_range(0,1);
+uniform sampler2D texture_metallic : hint_default_white,filter_linear_mipmap,repeat_enable;
+uniform vec4 metallic_texture_channel;
+uniform sampler2D texture_roughness : hint_roughness_r,filter_linear_mipmap,repeat_enable;
+uniform float specular;
+uniform float metallic;
+uniform int particles_anim_h_frames;
+uniform int particles_anim_v_frames;
+uniform bool particles_anim_loop;
+uniform vec3 uv1_scale;
+uniform vec3 uv1_offset;
+uniform vec3 uv2_scale;
+uniform vec3 uv2_offset;
+
+
+void vertex() {
+	UV=UV*uv1_scale.xy+uv1_offset.xy;
+	mat4 mat_world = mat4(normalize(INV_VIEW_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]) ,normalize(INV_VIEW_MATRIX[2]), MODEL_MATRIX[3]);
+	mat_world = mat_world * mat4(vec4(cos(INSTANCE_CUSTOM.x), -sin(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(sin(INSTANCE_CUSTOM.x), cos(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat_world;
+	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
+	float h_frames = float(particles_anim_h_frames);
+	float v_frames = float(particles_anim_v_frames);
+	float particle_total_frames = float(particles_anim_h_frames * particles_anim_v_frames);
+	float particle_frame = floor(INSTANCE_CUSTOM.z * float(particle_total_frames));
+	if (!particles_anim_loop) {
+		particle_frame = clamp(particle_frame, 0.0, particle_total_frames - 1.0);
+	} else {
+		particle_frame = mod(particle_frame, particle_total_frames);
+	}
+	UV /= vec2(h_frames, v_frames);
+	UV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);
+}
+
+
+
+
+
+
+void fragment() {
+	vec2 base_uv = UV;
+	vec4 albedo_tex = texture(texture_albedo,base_uv);
+	albedo_tex *= COLOR;
+	ALBEDO = albedo.rgb * albedo_tex.rgb;
+	float metallic_tex = dot(texture(texture_metallic,base_uv),metallic_texture_channel);
+	METALLIC = metallic_tex * metallic;
+	vec4 roughness_texture_channel = vec4(1.0,0.0,0.0,0.0);
+	float roughness_tex = dot(texture(texture_roughness,base_uv),roughness_texture_channel);
+	ROUGHNESS = roughness_tex * roughness;
+	SPECULAR = specular;
+	ALPHA *= albedo_tex.a ;
+}
+
+void light() {
+	if (!LIGHT_IS_DIRECTIONAL) {
+		DIFFUSE_LIGHT += LIGHT_COLOR * 10.0;
+	}
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_t5su8"]
+render_priority = 0
+shader = SubResource("Shader_msdmn")
+shader_parameter/albedo = Color(0.6, 0.596078, 0.596078, 0.564706)
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = 0.5
+shader_parameter/metallic = 0.0
+shader_parameter/particles_anim_h_frames = 1
+shader_parameter/particles_anim_v_frames = 1
+shader_parameter/particles_anim_loop = false
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+shader_parameter/texture_albedo = ExtResource("10_o65lm")
 
 [sub_resource type="Curve" id="Curve_mylu8"]
-_data = [Vector2(0, 0.0073266), 0.0, 0.0, 0, 0, Vector2(0.144509, 1), 0.0, 0.0, 0, 0, Vector2(0.89788, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+_data = [Vector2(0, 0.0073266), 0.0, 0.0, 0, 0, Vector2(0.319846, 0.475089), 0.0, 0.0, 0, 0, Vector2(0.803468, 0.500488), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 4
 
 [sub_resource type="CurveTexture" id="CurveTexture_hrjyk"]
 curve = SubResource("Curve_mylu8")
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_jbk4c"]
+emission_shape_scale = Vector3(2, 1, 1.5)
 emission_shape = 3
 emission_box_extents = Vector3(1, 1, 1)
 gravity = Vector3(2.08165e-12, 2.08165e-12, 2.08165e-12)
@@ -252,6 +327,7 @@ shape = SubResource("13")
 [node name="light1" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -0.337544, -0.199193, 0.496962)
 light_energy = 0.0
+light_indirect_energy = 0.0
 light_volumetric_fog_energy = 10.0
 light_size = 0.03
 shadow_enabled = true
@@ -261,7 +337,7 @@ spot_angle_attenuation = 0.96
 
 [node name="light2" type="SpotLight3D" parent="BlueRov"]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.389553, -0.199193, 0.496962)
-light_energy = 1.39
+light_energy = 0.0
 light_indirect_energy = 0.0
 light_volumetric_fog_energy = 10.0
 shadow_enabled = true
@@ -310,11 +386,10 @@ process_material = SubResource("ParticleProcessMaterial_rtb5u")
 draw_pass_1 = SubResource("QuadMesh_xcnml")
 
 [node name="GPUParticles3D2" type="GPUParticles3D" parent="BlueRov/bluerov cleaned decimated2"]
-transform = Transform3D(-8.74228e-08, 1.74846e-07, 2, 0, -2, 1.74846e-07, 2, 7.64275e-15, 8.74228e-08, -0.639294, -0.117958, 3.51955)
-material_override = SubResource("StandardMaterial3D_ds80h")
+transform = Transform3D(-8.74228e-08, 1.74846e-07, 2, 0, -2, 1.74846e-07, 2, 7.64275e-15, 8.74228e-08, -0.639294, -0.117958, 2.14083)
+material_override = SubResource("ShaderMaterial_t5su8")
 amount = 5000
-lifetime = 10.0
-explosiveness = 0.05
+lifetime = 5.0
 randomness = 0.3
 visibility_aabb = AABB(-3.94601, -1.33526, -1.8542, 6.9633, 2.67052, 3.70839)
 process_material = SubResource("ParticleProcessMaterial_jbk4c")
