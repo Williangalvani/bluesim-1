@@ -161,14 +161,14 @@ void fragment() {
 
 void light() {
 	if (!LIGHT_IS_DIRECTIONAL) {
-		DIFFUSE_LIGHT += LIGHT_COLOR * 10.0;
+		DIFFUSE_LIGHT += LIGHT_COLOR * ALBEDO * 10.0;
 	}
 }"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t5su8"]
 render_priority = 0
 shader = SubResource("Shader_msdmn")
-shader_parameter/albedo = Color(0.6, 0.596078, 0.596078, 0.564706)
+shader_parameter/albedo = Color(0.47451, 0.509804, 0.380392, 0.301961)
 shader_parameter/point_size = 1.0
 shader_parameter/roughness = 1.0
 shader_parameter/metallic_texture_channel = null
