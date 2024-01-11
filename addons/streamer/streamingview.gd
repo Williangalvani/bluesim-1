@@ -11,8 +11,7 @@ func _ready():
 	print("script done with setting up gstreamer")
 	
 func push():
-	if Globals.streaming:
-			$"../../UdpH264Streamer".push_buffer_to_gstreamer(get_texture().get_image().get_data())
+	$"../../UdpH264Streamer".push_buffer_to_gstreamer(get_texture().get_image().get_data())
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
