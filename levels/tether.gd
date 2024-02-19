@@ -1,8 +1,8 @@
 @tool
 extends Node
 
-const SECTION = preload("res://rope/section.tscn")
-const LINK = preload("res://rope/joint.tscn")
+const SECTION = preload("res://vehicles/tether/section.tscn")
+const LINK = preload("res://vehicles/tether/joint.tscn")
 
 var section_length = Vector3(-0.145,0,0)
 @export var straight_loops = 1

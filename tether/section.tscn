@@ -1,6 +1,6 @@
 [gd_scene load_steps=6 format=3 uid="uid://nxhytyejyscn"]
 
-[ext_resource type="Script" path="res://rope/section.gd" id="1_hhk5k"]
+[ext_resource type="Script" path="res://tether/section.gd" id="1_hhk5k"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_xlec7"]
 friction = 0.0
