@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://chw0j8gd1ld8x"
-path="res://.godot/imported/newton_gripper.dae-99eec1cbd53d76d8ac886ae29870b1c1.scn"
+uid="uid://dglj8xca11imm"
+path="res://.godot/imported/newton.dae-333972e706b39f7ae53cc18b6bda9ec3.scn"
 
 [deps]
 
-source_file="res://imports/newton/newton_gripper.dae"
-dest_files=["res://.godot/imported/newton_gripper.dae-99eec1cbd53d76d8ac886ae29870b1c1.scn"]
+source_file="res://vehicles/components/newton/newton.dae"
+dest_files=["res://.godot/imported/newton.dae-333972e706b39f7ae53cc18b6bda9ec3.scn"]
 
 [params]
 

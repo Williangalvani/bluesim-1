@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://d2pk0jdvrv5gh"]
 
-[ext_resource type="PackedScene" uid="uid://dglj8xca11imm" path="res://imports/newton/newton.dae" id="3"]
+[ext_resource type="PackedScene" uid="uid://dglj8xca11imm" path="res://vehicles/components/newton/newton.dae" id="3"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_k20x5"]
 albedo_color = Color(0.266667, 0.266667, 0.266667, 1)
