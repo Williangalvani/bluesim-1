@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3 uid="uid://dykuk62nuk0bf"]
 
-[ext_resource type="Script" path="res://scripts/buoyheavy.gd" id="1_w0oog"]
+[ext_resource type="Script" path="res://scenery/misc/buoy/buoyheavy.gd" id="1_w0oog"]
 
 [sub_resource type="SphereShape3D" id="4"]
 radius = 0.0739091
