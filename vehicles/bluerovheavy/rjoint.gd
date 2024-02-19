@@ -4,7 +4,7 @@ extends JoltHingeJoint3D
 @export var targetAngle: float = -0.28
 
 var starting_angle = 0
-var kp = 4
+var kp = 10
 var base
 var claw
 # Called when the node enters the scene tree for the first time.

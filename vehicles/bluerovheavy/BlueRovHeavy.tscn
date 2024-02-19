@@ -224,6 +224,8 @@ motor_enabled = true
 motor_max_torque = 50.0
 node_a = NodePath("../BlueRov")
 node_b = NodePath("../lClaw")
+solver_velocity_iterations = 20
+solver_position_iterations = 20
 transform = Transform3D(0.974437, 0.224662, 9.82028e-09, 0, -4.37114e-08, 1, 0.224662, -0.974437, -4.2594e-08, 0.44739, -0.260608, -0.0336983)
 script = ExtResource("1_ox30p")
 
@@ -235,6 +237,8 @@ motor_enabled = true
 motor_max_torque = 50.0
 node_a = NodePath("../BlueRov")
 node_b = NodePath("../rClaw")
+solver_velocity_iterations = 20
+solver_position_iterations = 20
 transform = Transform3D(0.974437, 0.224662, 9.82028e-09, 1.96406e-08, -4.14766e-08, -1, -0.224662, 0.974437, -4.48288e-08, 0.411646, -0.260608, 0.040467)
 script = ExtResource("2_l1kll")
 

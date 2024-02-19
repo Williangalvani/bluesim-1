@@ -1,0 +1,25 @@
+[gd_resource type="AnimatedTexture" load_steps=7 format=3 uid="uid://r40rgx1yevsi"]
+
+[ext_resource type="Texture2D" uid="uid://0pbcqhiv0hpe" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_001.bmp" id="1_ngilc"]
+[ext_resource type="Texture2D" uid="uid://cv0knoqt0a0mr" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_002.bmp" id="2_yd4w3"]
+[ext_resource type="Texture2D" uid="uid://der871dwsv6jp" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_003.bmp" id="3_uwr6f"]
+[ext_resource type="Texture2D" uid="uid://cfdd26v2to8v5" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_004.bmp" id="4_5jobt"]
+[ext_resource type="Texture2D" uid="uid://b4stnv6ouxp85" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_005.bmp" id="5_wuec1"]
+[ext_resource type="Texture2D" uid="uid://dacq8nxpuyqgo" path="res://scenery/shaders/shader_textures/caustics/caustics/caustic_006.bmp" id="6_ppynp"]
+
+[resource]
+frames = 7
+speed_scale = 11.0
+frame_0/texture = ExtResource("1_ngilc")
+frame_1/texture = ExtResource("2_yd4w3")
+frame_1/duration = 1.0
+frame_2/texture = ExtResource("3_uwr6f")
+frame_2/duration = 1.0
+frame_3/texture = ExtResource("4_5jobt")
+frame_3/duration = 1.0
+frame_4/texture = ExtResource("4_5jobt")
+frame_4/duration = 1.0
+frame_5/texture = ExtResource("5_wuec1")
+frame_5/duration = 1.0
+frame_6/texture = ExtResource("6_ppynp")
+frame_6/duration = 1.0

@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=35 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
@@ -15,6 +15,7 @@
 [ext_resource type="Texture2D" uid="uid://dyste7anvays1" path="res://addons/controller_icons/assets/ps4/l_stick_click.png" id="10_824ux"]
 [ext_resource type="PackedScene" uid="uid://dykuk62nuk0bf" path="res://scenery/misc/floatHeavy.tscn" id="10_ivl5n"]
 [ext_resource type="Texture2D" uid="uid://d1mr028oy6oc0" path="res://blender_sources/eliot.png" id="10_t7mob"]
+[ext_resource type="PackedScene" uid="uid://df5m8b4703t4q" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn" id="17_wb6uh"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ifx0o"]
 size = Vector3(0.33606, 0.388695, 2.73244)
@@ -252,5 +253,14 @@ material = SubResource("FogMaterial_nuaoi")
 [node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
 transform = Transform3D(10.1692, 0, 0, 0, 1, 0, 0, 0, 2.99081, -9.8651, 0.796415, 0)
 mesh = SubResource("PlaneMesh_xuokh")
+
+[node name="RigidBody3D5" parent="." groups=["boid"] instance=ExtResource("17_wb6uh")]
+transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-16, -3.48787e-16, 3.48787e-16, 1, -1.20002, 2.86251, 0.757516)
+
+[node name="RigidBody3D6" parent="." groups=["boid"] instance=ExtResource("17_wb6uh")]
+transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-16, -3.48787e-16, 3.48787e-16, 1, -0.838602, 2.86251, 0.216811)
+
+[node name="RigidBody3D7" parent="." groups=["boid"] instance=ExtResource("17_wb6uh")]
+transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-16, -3.48787e-16, 3.48787e-16, 1, -1.20002, 3.22245, 0.712489)
 
 [connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]

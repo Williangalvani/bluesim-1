@@ -378,7 +378,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.33197, 0)
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
-straight_loops = 200
+straight_loops = 50
 coiled_loops = 0
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]

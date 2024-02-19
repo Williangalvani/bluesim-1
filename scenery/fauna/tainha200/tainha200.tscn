@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=3 uid="uid://210hbbof773p"]
+
+[ext_resource type="PackedScene" uid="uid://cmas0xijob48o" path="res://blender_sources/fishy.blend" id="1_3n22d"]
+
+[sub_resource type="GDScript" id="GDScript_fc227"]
+script/source = "@tool
+extends Node3D
+@export var points: int = 10
+@export var max_angle: float = 90
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	$AnimationPlayer.play(\"Animation\")
+	var raycast = $\"../raycast\"
+	for i in range(points):
+		var t = i/points
+		
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta):
+	pass
+"
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ovxuv"]
+albedo_color = Color(1, 1, 0.278431, 1)
+
+[node name="fishy" instance=ExtResource("1_3n22d")]
+script = SubResource("GDScript_fc227")
+
+[node name="tail" parent="." index="2"]
+transform = Transform3D(-0.00401441, 6.63234e-09, 0.0463891, 0.0463891, -6.08318e-09, 0.00401441, 2.21079e-09, 0.139687, -2.02773e-09, 0, 0, 0)
+
+[node name="Cylinder_003" parent="." index="5"]
+surface_material_override/0 = SubResource("StandardMaterial3D_ovxuv")
+
+[node name="AnimationPlayer" parent="." index="6"]
+autoplay = "Animation"
