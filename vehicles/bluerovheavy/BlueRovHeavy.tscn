@@ -1,6 +1,6 @@
 [gd_scene load_steps=40 format=3 uid="uid://d0rv01klybh31"]
 
-[ext_resource type="Script" path="res://scripts/BlueROV2Heavy.gd" id="1"]
+[ext_resource type="Script" path="res://vehicles/bluerovheavy/BlueROV2Heavy.gd" id="1"]
 [ext_resource type="Script" path="res://vehicles/bluerovheavy/ljoint.gd" id="1_ox30p"]
 [ext_resource type="PackedScene" uid="uid://d2pk0jdvrv5gh" path="res://vehicles/components/newton.tscn" id="2"]
 [ext_resource type="Script" path="res://vehicles/bluerovheavy/rjoint.gd" id="2_l1kll"]
