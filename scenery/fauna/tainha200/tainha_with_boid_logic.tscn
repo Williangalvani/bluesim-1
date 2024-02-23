@@ -37,7 +37,7 @@ mesh = SubResource("SphereMesh_y7umv")
 surface_material_override/0 = SubResource("StandardMaterial3D_ekbhu")
 
 [node name="forcepoint" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00494651, 2.98023e-08, 0.246152)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00494651, 2.98023e-08, 0.0429258)
 
 [node name="forward" type="ShapeCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.00370657, 0.528266)
