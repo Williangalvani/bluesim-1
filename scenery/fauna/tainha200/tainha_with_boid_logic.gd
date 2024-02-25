@@ -135,7 +135,7 @@ func _process(_delta):
 		self.apply_alignment_and_separation()
 		self.apply_stay_in_water()
 		self.apply_keep_upright()
-		self.apply_forward()
+	self.apply_forward()
 	# apply the force
 	self.force_sum = self.force_sum.normalized() * min(self.force_sum.length(), self.max_force)
 	self.apply_force(self.force_sum, self.head_position - self.global_transform.origin)
