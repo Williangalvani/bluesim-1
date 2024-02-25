@@ -92,7 +92,7 @@ func apply_keep_upright():
 func apply_regular_obstacle_avoidance():
 	if not $forward.is_colliding() :
 		$target.global_transform.origin = Vector3(100,0,0)
-		return
+		return false
 	
 	var furthest = 0
 	var furthest_point = null
@@ -101,7 +101,7 @@ func apply_regular_obstacle_avoidance():
 			var point = self.global_transform.origin + raycast.global_transform.basis.y*-1
 			$target.global_transform.origin = point
 			self.steer_towards(point, avoidance)
-			return
+			return true
 		else:
 			var point = raycast.get_collision_point()
 			var distance = point.distance_to(self.global_transform.origin)
@@ -109,6 +109,7 @@ func apply_regular_obstacle_avoidance():
 				furthest_point = point
 				furthest = distance
 	self.steer_towards(furthest_point)
+	return true
 
 func get_head_position():
 	return $forcepoint.global_transform.origin
@@ -128,12 +129,13 @@ func _process(_delta):
 	self.head_position = self.get_head_position()
 	self.force_sum = Vector3.ZERO # no force to start with
 	# sum all the forces
-	self.apply_cohesion()
-	self.apply_alignment_and_separation()
-	self.apply_regular_obstacle_avoidance()
-	self.apply_stay_in_water()
-	self.apply_keep_upright()
-	self.apply_forward()
+	var avoiding = self.apply_regular_obstacle_avoidance()
+	if not avoiding:
+		self.apply_cohesion()
+		self.apply_alignment_and_separation()
+		self.apply_stay_in_water()
+		self.apply_keep_upright()
+		self.apply_forward()
 	# apply the force
 	self.force_sum = self.force_sum.normalized() * min(self.force_sum.length(), self.max_force)
 	self.apply_force(self.force_sum, self.head_position - self.global_transform.origin)
