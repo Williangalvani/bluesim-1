@@ -1,16 +1,14 @@
-[gd_scene load_steps=17 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=13 format=3 uid="uid://clbt7xl26oubb"]
 
-[ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
 [ext_resource type="Script" path="res://menu/SubViewport.gd" id="2_fvsuw"]
-[ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
-[ext_resource type="Script" path="res://levels/camera/InterpolatedCamera.gd" id="4"]
 [ext_resource type="Script" path="res://levels/camera/targetPos.gd" id="5"]
 [ext_resource type="Script" path="res://levels/tether.gd" id="5_ka5gl"]
-[ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
 [ext_resource type="PackedScene" uid="uid://d0rv01klybh31" path="res://vehicles/bluerovheavy/BlueRovHeavy.tscn" id="9"]
+[ext_resource type="Material" uid="uid://bqefm2sjfvjij" path="res://vehicles/components/ping360render.tres" id="9_ru873"]
+[ext_resource type="Script" path="res://vehicles/components/ping360/ping360display.gd" id="10_5kfrs"]
 
 [sub_resource type="GDScript" id="1"]
 script/source = "# Licensed under the MIT License.
@@ -278,29 +276,6 @@ func _input(event):
 			self.hide()
 "
 
-[sub_resource type="GDScript" id="4"]
-script/source = "extends Camera3D
-
-
-# Declare member variables here. Examples:
-# var a = 2
-# var b = \"text\"
-
-
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	pass # Replace with function body.
-
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	self.look_at(Globals.active_vehicle.transform.origin, Vector3(0,1,0))
-
-"
-
-[sub_resource type="ShaderMaterial" id="5"]
-shader = ExtResource("6")
-
 [node name="Node2D" type="Control"]
 process_mode = 3
 show_behind_parent = true
@@ -315,46 +290,20 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("7")
 
-[node name="ViewportGlobal" type="SubViewportContainer" parent="."]
-process_mode = 2
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-stretch = true
-
-[node name="SubViewport" type="SubViewport" parent="ViewportGlobal"]
-handle_input_locally = false
-size = Vector2i(1152, 648)
-render_target_update_mode = 0
-
-[node name="Camera3D" type="Camera3D" parent="ViewportGlobal/SubViewport" groups=["cameras"]]
-process_mode = 1
-transform = Transform3D(-0.995028, 2.44187e-09, 0.0995974, 0.0391301, 0.919589, 0.390929, -0.0915886, 0.392883, -0.915016, -1.29315, 0.471191, 0.969824)
-cull_mask = 1048573
-current = true
-far = 497.4
-script = ExtResource("4")
-
 [node name="ViewportCamera" type="SubViewportContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = 128.0
-offset_bottom = 72.0
+offset_right = -5.0
+offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="ViewportCamera"]
 handle_input_locally = false
-size = Vector2i(1280, 720)
+size = Vector2i(1147, 653)
 render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
 
@@ -468,63 +417,33 @@ light_indirect_energy = 0.7
 omni_range = 5.9
 
 [node name="ViewportGlobal2" type="SubViewportContainer" parent="."]
-process_mode = 2
-visible = false
-layout_mode = 0
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -1019.76
-offset_top = 1.12245
-offset_right = -657.763
-offset_bottom = 249.122
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-stretch = true
-
-[node name="SubViewport" type="SubViewport" parent="ViewportGlobal2"]
-handle_input_locally = false
-size = Vector2i(361, 247)
-render_target_update_mode = 0
-
-[node name="Camera3D" type="Camera3D" parent="ViewportGlobal2/SubViewport"]
-transform = Transform3D(-0.998367, -1.8596e-09, 0.0571282, 0.0271268, 0.880072, 0.474066, -0.0502769, 0.474841, -0.878634, 0, 14.74, 0)
-current = true
-script = SubResource("4")
-
-[node name="Ping360Viewport" type="SubViewportContainer" parent="."]
-process_mode = 1
-visible = false
-material = SubResource("5")
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -303.0
-offset_top = -273.0
-offset_right = -7.0
-offset_bottom = -8.0
+offset_left = -200.0
+offset_top = -200.0
 grow_horizontal = 0
 grow_vertical = 0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 stretch = true
-script = ExtResource("3")
 
-[node name="SubViewport" type="SubViewport" parent="Ping360Viewport"]
+[node name="SubViewport" type="SubViewport" parent="ViewportGlobal2"]
 handle_input_locally = false
-size = Vector2i(296, 265)
-render_target_update_mode = 0
+size = Vector2i(200, 200)
+render_target_update_mode = 4
 
-[node name="Camera3D" type="Camera3D" parent="Ping360Viewport/SubViewport" groups=["cameras"]]
-transform = Transform3D(-0.995028, 0, 0.0995974, 0, 1, 0, -0.0995974, 0, -0.995028, -1.54154, 7.13712, -2.96935)
-cull_mask = 3
-environment = ExtResource("1")
-current = true
-script = ExtResource("4")
+[node name="Control" type="ColorRect" parent="ViewportGlobal2/SubViewport"]
+material = ExtResource("9_ru873")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_5kfrs")
 
 [node name="ReferenceRect" type="ReferenceRect" parent="."]
 visible = false
@@ -539,6 +458,7 @@ offset_bottom = 1.36035
 
 [node name="UdpH264Streamer" type="UdpH264Streamer" parent="."]
 
-[connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/Ping360Toggle" to="Ping360Viewport" method="_on_Ping360Toggle_toggled"]
+[node name="SubViewport" type="SubViewport" parent="."]
+
 [connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/StreamingToggle" to="." method="_on_streaming_toggle_toggled"]
 [connection signal="value_changed" from="ViewportCamera/SettingsPanel/VBoxContainer/physicsRateSlider" to="ViewportCamera/SettingsPanel" method="_on_HSlider_value_changed"]

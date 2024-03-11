@@ -1,25 +1,49 @@
-[gd_scene load_steps=5 format=3 uid="uid://btr1l5hx0wqm2"]
+[gd_scene load_steps=7 format=3 uid="uid://btr1l5hx0wqm2"]
 
-[ext_resource type="Script" path="res://vehicles/components/ping360.gd" id="1"]
+[ext_resource type="Script" path="res://vehicles/components/ping360/cameraCapture.gd" id="1_dhxlf"]
+[ext_resource type="Shader" uid="uid://bahuknu7g0bjb" path="res://vehicles/components/ping360/depth_maps.tres" id="1_jc5st"]
+[ext_resource type="Script" path="res://vehicles/components/ping360/ping360spinner.gd" id="1_unj0d"]
 
 [sub_resource type="BoxMesh" id="1"]
 size = Vector3(0.1, 0.1, 0.1)
 
-[sub_resource type="PrismMesh" id="2"]
+[sub_resource type="QuadMesh" id="QuadMesh_8pmph"]
 
-[sub_resource type="QuadMesh" id="4"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nla1a"]
+render_priority = 0
+shader = ExtResource("1_jc5st")
 
 [node name="ping360" type="MeshInstance3D" groups=["ping360"]]
-transform = Transform3D(0.0614213, 0, 0, 0, 0.0614213, 0, 0, 0, 0.0614213, -0.0215761, -0.0488096, -0.000839435)
+process_mode = 3
+transform = Transform3D(0.0614213, 0, 0, 0, 0.0614213, 0, 0, 0, 0.0614213, 2.08165e-12, 2.08165e-12, 2.08165e-12)
 mesh = SubResource("1")
-script = ExtResource("1")
-
-[node name="target2" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0867386, 0, -0.0166039)
-visible = false
-mesh = SubResource("2")
 
 [node name="display" type="MeshInstance3D" parent="."]
-transform = Transform3D(-8.97672, 0, -8.9366e-07, 0, 8.97672, 0, 4.35954e-07, 0, -1.90355, -3.13375, -6.91549, 14.4054)
-layers = 0
-mesh = SubResource("4")
+transform = Transform3D(-4.71993, 1.64625e-15, -8.74998e-08, 1.64625e-15, 4.71993, -3.49094e-16, 4.1263e-07, -1.64625e-15, -1.00088, -3.13375, -6.91549, 14.4054)
+visible = false
+cast_shadow = 0
+gi_mode = 0
+mesh = SubResource("QuadMesh_8pmph")
+surface_material_override/0 = SubResource("ShaderMaterial_nla1a")
+
+[node name="SubViewport" type="SubViewport" parent="." groups=["ping360viewport"]]
+process_mode = 3
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+script = ExtResource("1_dhxlf")
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+process_mode = 3
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.08165e-12, 2.08165e-12, 2.08165e-12)
+fov = 25.0
+near = 0.2
+far = 10.0
+script = ExtResource("1_unj0d")
+
+[node name="display2" type="MeshInstance3D" parent="SubViewport/Camera3D"]
+transform = Transform3D(-0.348169, 1.07653e-16, -5.28923e-09, 1.21437e-16, 0.30865, -2.11022e-17, 3.04379e-08, -1.07653e-16, -0.0605018, 0.00147025, -0.00289081, -0.29623)
+cast_shadow = 0
+gi_mode = 0
+mesh = SubResource("QuadMesh_8pmph")
+skeleton = NodePath("../../..")
+surface_material_override/0 = SubResource("ShaderMaterial_nla1a")

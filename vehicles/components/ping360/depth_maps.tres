@@ -1,0 +1,34 @@
+[gd_resource type="Shader" format=3 uid="uid://bahuknu7g0bjb"]
+
+[resource]
+code = "// NOTE: Shader automatically converted from Godot Engine 4.2.1.stable's StandardMaterial3D.
+
+shader_type spatial;
+render_mode blend_mix,depth_draw_opaque,cull_disabled,diffuse_burley,specular_schlick_ggx,unshaded,shadows_disabled;
+uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
+
+varying mat4 CAMERA;
+
+void vertex() {
+  CAMERA = INV_VIEW_MATRIX;
+}
+
+float linearize_depth(float depth, float near, float far) {
+    float z = depth * 2.0 - 1.0; // Back to NDC 
+    return (2.0 * near * far) / (far + near - z * (far - near));    
+}
+
+void fragment() {
+	float depth = texture(depth_texture, SCREEN_UV).x;
+	vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, depth);
+	vec4 view = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
+	view.xyz /= view.w;
+	float linear_depth = sqrt(view.z*view.z + view.x*view.x + view.y*view.y);
+	linear_depth = pow(linear_depth, 2.0);
+	ALBEDO = vec3(min(max(linear_depth/50.0, 0.0), 1.0));
+	ALPHA = 1.0;
+	METALLIC = 0.0;
+	ROUGHNESS = 0.0;
+	SPECULAR = 0.0;
+}
+"
