@@ -28,7 +28,7 @@ albedo_color = Color(1, 1, 0.278431, 1)
 script = SubResource("GDScript_fc227")
 
 [node name="tail" parent="." index="2"]
-transform = Transform3D(-0.00401441, 6.63234e-09, 0.0463891, 0.0463891, -6.08318e-09, 0.00401441, 2.21079e-09, 0.139687, -2.02773e-09, 0, 0, 0)
+transform = Transform3D(-0.0406598, -1.14378e-08, -0.0226902, -0.0226902, -2.97546e-09, 0.0406598, -3.81261e-09, 0.139687, -9.91822e-10, 0, 0, 0)
 
 [node name="Cylinder_003" parent="." index="5"]
 surface_material_override/0 = SubResource("StandardMaterial3D_ovxuv")
