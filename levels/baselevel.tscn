@@ -295,17 +295,45 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_right = -5.0
-offset_bottom = 5.0
 grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="ViewportCamera"]
 handle_input_locally = false
-size = Vector2i(1147, 653)
+size = Vector2i(1152, 648)
 render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
+
+[node name="ViewportGlobal2" type="SubViewportContainer" parent="ViewportCamera/SubViewport"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -195.0
+offset_top = -205.0
+offset_right = 5.0
+offset_bottom = -5.0
+grow_horizontal = 0
+grow_vertical = 0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="ViewportCamera/SubViewport/ViewportGlobal2"]
+handle_input_locally = false
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Control" type="ColorRect" parent="ViewportCamera/SubViewport/ViewportGlobal2/SubViewport"]
+material = ExtResource("9_ru873")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_5kfrs")
 
 [node name="playerCamera" type="Node3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.7902, 0)
@@ -415,35 +443,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.82227, -0.900686, 47.1526)
 light_energy = 0.8
 light_indirect_energy = 0.7
 omni_range = 5.9
-
-[node name="ViewportGlobal2" type="SubViewportContainer" parent="."]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -200.0
-grow_horizontal = 0
-grow_vertical = 0
-size_flags_horizontal = 3
-size_flags_vertical = 3
-stretch = true
-
-[node name="SubViewport" type="SubViewport" parent="ViewportGlobal2"]
-handle_input_locally = false
-size = Vector2i(200, 200)
-render_target_update_mode = 4
-
-[node name="Control" type="ColorRect" parent="ViewportGlobal2/SubViewport"]
-material = ExtResource("9_ru873")
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("10_5kfrs")
 
 [node name="ReferenceRect" type="ReferenceRect" parent="."]
 visible = false
