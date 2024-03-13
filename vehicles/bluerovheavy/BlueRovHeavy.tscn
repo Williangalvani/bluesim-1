@@ -373,6 +373,7 @@ spot_angle_attenuation = 0.48
 
 [node name="Camera3D" type="Camera3D" parent="BlueRov" groups=["cameras"]]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.00410311, 0.0132817, 0.378081)
+cull_mask = 1048573
 environment = ExtResource("4")
 fov = 80.0
 far = 640.7
