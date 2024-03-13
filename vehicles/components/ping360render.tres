@@ -106,7 +106,7 @@ void fragment() {
 	if(sample < 0.0) {
 		COLOR.rgb = texture(previous_image, UV).rgb;
 	} else {
-		COLOR.g = max(sample, 0);
+		COLOR.g = max(sample, 0) + smoothstep(0.2,0.0,polar.y);
 		COLOR.rgb = gradient(COLOR.g);
 	}
     COLOR.a = 1.0 - smoothstep(0.9, 1.0 ,polar.y);
