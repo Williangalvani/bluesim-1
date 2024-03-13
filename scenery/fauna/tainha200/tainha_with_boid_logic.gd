@@ -1,11 +1,11 @@
 extends RigidBody3D
 
-@export var max_neighbor_distance: float = 0.4
-@export var forward_force: float = 10.0
-@export var separation_gain: float = 0.5
+@export var max_neighbor_distance: float = 1.0
+@export var forward_force: float = 15.0
+@export var separation_gain: float = 1.5
 @export var cohesion: float = 4.0
 @export var alignment: float = 3.0
-@export var avoidance: float = 2.0
+@export var avoidance: float = 10.0
 @export var upright: float = 0.1
 @export var max_force: float = 10.0
 @export var debug: bool = false
@@ -96,6 +96,7 @@ func apply_regular_obstacle_avoidance():
 	
 	var furthest = 0
 	var furthest_point = null
+	raycasts.shuffle()
 	for raycast in raycasts:
 		if not raycast.is_colliding():
 			var point = self.global_transform.origin + raycast.global_transform.basis.y*-1
