@@ -1,24 +1,25 @@
 extends RigidBody3D
 
-@export var max_neighbor_distance: float = 1.0
+@export var max_neighbor_distance: float = 0.8
 @export var forward_force: float = 15.0
-@export var separation_gain: float = 1.5
-@export var cohesion: float = 4.0
-@export var alignment: float = 3.0
+@export var separation_gain: float = 1.8
+@export var cohesion: float = 12.0
+@export var alignment: float = 4.0
 @export var avoidance: float = 10.0
 @export var upright: float = 0.1
-@export var max_force: float = 10.0
+@export var max_force: float = 20.0
 @export var debug: bool = false
 
 var head_position = Vector3.ZERO
 var neighbor_nodes = []
 var num_neighbors = 0
-var avoidance_acumulator = Vector3.ZERO
 var raycasts = []
 var force_sum = Vector3.ZERO
+var randomized_force = 0
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	self.randomized_force = self.forward_force + randf()*5.0
 	for child in get_children():
 		if child is RayCast3D:
 			raycasts.append(child)
@@ -69,11 +70,7 @@ func apply_alignment_and_separation():
 		# alignment
 		self.steer_towards(self.global_transform.origin + node.linear_velocity.normalized()*100,alignment/(distance_sq * self.num_neighbors))
 		# separation
-		self.steer_away(node.global_transform.origin, separation_gain/(distance_sq * self.num_neighbors))
-
-func apply_near_obstacle_avoidance():
-	self.steer_away(self.avoidance_acumulator)
-	self.avoidance_acumulator = Vector3.ZERO
+		self.steer_away(node.global_transform.origin, separation_gain/(distance_sq * distance_sq * self.num_neighbors))
 
 func random_vector():
 	return Vector3(randf_range(-0.1,0.1),randf_range(-0.1,0.1), randf())
@@ -89,19 +86,22 @@ func apply_keep_upright():
 	var roll = -self.upright * self.global_transform.basis.get_euler()[2]
 	self.apply_torque(self.global_transform.basis.z * roll)
 
-func apply_regular_obstacle_avoidance():
+func apply_regular_obstshacle_avoidance():
 	if not $forward.is_colliding() :
 		$target.global_transform.origin = Vector3(100,0,0)
-		return false
-	
+		return false	
+
+	var collision_imminence = 0.8 - $forward.get_collision_point(0).distance_to(self.global_transform.origin)
+
 	var furthest = 0
 	var furthest_point = null
-	raycasts.shuffle()
+
+	# if not avoiding yet, pick a free raycast
 	for raycast in raycasts:
 		if not raycast.is_colliding():
 			var point = self.global_transform.origin + raycast.global_transform.basis.y*-1
 			$target.global_transform.origin = point
-			self.steer_towards(point, avoidance)
+			self.steer_towards(point, avoidance*collision_imminence)
 			return true
 		else:
 			var point = raycast.get_collision_point()
@@ -117,8 +117,8 @@ func get_head_position():
 
 func apply_forward():
 	var force = self.global_transform.basis.z * forward_force
-	force.y *= 0.5
-	var random_offset = + Vector3(randf_range(-0.5,0.5),randf_range(-0.5,0.5),randf_range(-0.5,0.5))
+	var rand = 3.0
+	var random_offset = + Vector3(randf_range(-rand,rand),randf_range(-rand,rand),randf_range(-rand,rand))
 	self.apply_force(force + random_offset, self.global_transform.basis.z * 0.2)
 	
 
@@ -130,13 +130,14 @@ func _process(_delta):
 	self.head_position = self.get_head_position()
 	self.force_sum = Vector3.ZERO # no force to start with
 	# sum all the forces
-	var avoiding = self.apply_regular_obstacle_avoidance()
+	var avoiding = self.apply_regular_obstshacle_avoidance()
+	self.apply_alignment_and_separation()
+	self.apply_cohesion()
+	self.apply_stay_in_water()
+	self.apply_keep_upright()
 	if not avoiding:
-		self.apply_cohesion()
-		self.apply_alignment_and_separation()
-		self.apply_stay_in_water()
-		self.apply_keep_upright()
+
 		self.apply_forward()
 	# apply the force
-	self.force_sum = self.force_sum.normalized() * min(self.force_sum.length(), self.max_force)
+	self.force_sum = self.force_sum.normalized() * max(min(self.force_sum.length(), self.max_force), self.max_force/2)
 	self.apply_force(self.force_sum, self.head_position - self.global_transform.origin)

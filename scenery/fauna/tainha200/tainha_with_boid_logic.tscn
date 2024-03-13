@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://df5m8b4703t4q"]
+[gd_scene load_steps=10 format=3 uid="uid://df5m8b4703t4q"]
 
 [ext_resource type="Script" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.gd" id="1_16gu6"]
 [ext_resource type="PackedScene" uid="uid://210hbbof773p" path="res://scenery/fauna/tainha200/tainha200.tscn" id="1_n5okt"]
@@ -19,10 +19,13 @@ height = 0.8
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_1yiub"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_52c8q"]
+albedo_color = Color(1, 0, 0, 1)
+
 [node name="body" type="RigidBody3D"]
 gravity_scale = 1.66533e-16
 linear_damp = 10.0
-angular_damp = 10.0
+angular_damp = 20.0
 script = ExtResource("1_16gu6")
 
 [node name="fishy" parent="." instance=ExtResource("1_n5okt")]
@@ -49,10 +52,6 @@ target_position = Vector3(2.08165e-12, 2.08165e-12, 2.08165e-12)
 
 [node name="RayCast3D" type="RayCast3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
-target_position = Vector3(2.08165e-12, -0.8, 2.08165e-12)
-
-[node name="RayCast3D16" type="RayCast3D" parent="."]
-transform = Transform3D(-0.513452, 0.858119, 3.75096e-08, 0, -4.37114e-08, 1, 0.858119, 0.513452, 2.24437e-08, 0, 0, 0)
 target_position = Vector3(2.08165e-12, -0.8, 2.08165e-12)
 
 [node name="RayCast3D2" type="RayCast3D" parent="."]
@@ -111,7 +110,12 @@ target_position = Vector3(2.08165e-12, -0.8, 2.08165e-12)
 transform = Transform3D(4.49279e-09, 1.10021e-07, -1, 0.707107, -0.707107, -7.462e-08, -0.707107, -0.707107, -3.09086e-08, 0, 0, 0)
 target_position = Vector3(2.08165e-12, -0.8, 2.08165e-12)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="RayCast3D16" type="RayCast3D" parent="."]
+transform = Transform3D(-0.513452, 0.858119, 3.75096e-08, 0, -4.37114e-08, 1, 0.858119, 0.513452, 2.24437e-08, 0, 0, 0)
+target_position = Vector3(2.08165e-12, -0.8, 2.08165e-12)
+
+[node name="sonar_surface" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.211389, 0, 0, 0, -9.24012e-09, -0.211389, 0, 0.211389, -9.24012e-09, 0, 0, 0)
 layers = 2
 mesh = SubResource("CapsuleMesh_1yiub")
+surface_material_override/0 = SubResource("StandardMaterial3D_52c8q")
