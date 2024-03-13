@@ -1,10 +1,11 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bqefm2sjfvjij"]
+[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://bqefm2sjfvjij"]
 
 [sub_resource type="Shader" id="1"]
 code = "shader_type canvas_item;
 
 uniform sampler2D depth_map;
-uniform sampler2D previous_image;	
+uniform sampler2D noise: repeat_enable;
+uniform sampler2D previous_image;
 uniform float camera_angle;
 uniform float size;
 uniform float fov;
@@ -24,7 +25,7 @@ float get_intensity_at_distance_angle(vec2 _UV, float distance, float angle) {
 			accum += abs(pixel - y);	
 		}
 	}
-	return accum;
+	return accum + texture(noise, (_UV)+vec2(TIME)).r*0.25;
 }
 
 vec3 gradient(float value) {
@@ -115,8 +116,15 @@ void fragment() {
 	
 }"
 
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_laq5j"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_pk5r7"]
+seamless = true
+noise = SubResource("FastNoiseLite_laq5j")
+
 [resource]
 shader = SubResource("1")
 shader_parameter/camera_angle = 90.0
 shader_parameter/size = 256.0
 shader_parameter/fov = 25.0
+shader_parameter/noise = SubResource("NoiseTexture2D_pk5r7")
