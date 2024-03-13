@@ -216,7 +216,7 @@ func actuate_servo(id, percentage):
 		7:
 			self.add_force_local_if_underwater($t8.transform.basis*Vector3(force,0,0), $t8.position)
 		14:
-			$Camera3D.rotation_degrees.x = -45 + 120 * percentage
+			$Camera3D.rotation_degrees.x = $Camera3D.rotation_degrees.x.lerp(-45 + 120 * percentage, 0.9)
 		12:
 			percentage -= 0.1
 			percentage = max(0, percentage)
