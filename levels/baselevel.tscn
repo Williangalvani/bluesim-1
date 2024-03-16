@@ -282,8 +282,8 @@ show_behind_parent = true
 layout_mode = 3
 anchor_right = 1.109
 anchor_bottom = 1.11
-offset_right = -209.28
-offset_bottom = -118.8
+offset_right = -125.568
+offset_bottom = -71.28
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("7")
@@ -299,7 +299,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="ViewportCamera"]
 handle_input_locally = false
-size = Vector2i(1920, 1080)
+size = Vector2i(1152, 648)
 render_target_update_mode = 4
 script = ExtResource("2_fvsuw")
 
@@ -309,8 +309,8 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -400.0
-offset_top = -400.0
+offset_left = -250.0
+offset_top = -250.0
 grow_horizontal = 0
 grow_vertical = 0
 size_flags_horizontal = 3
@@ -320,7 +320,7 @@ stretch = true
 [node name="SubViewport" type="SubViewport" parent="ViewportCamera/SubViewport/ViewportGlobal2"]
 transparent_bg = true
 handle_input_locally = false
-size = Vector2i(400, 400)
+size = Vector2i(250, 250)
 render_target_update_mode = 4
 
 [node name="Control" type="ColorRect" parent="ViewportCamera/SubViewport/ViewportGlobal2/SubViewport"]
