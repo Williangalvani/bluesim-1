@@ -12,7 +12,7 @@ uniform float fov;
 
 float get_intensity_at_distance_angle(vec2 _UV, float distance, float angle) {
 	float x = angle*size;
-	if (x>256.0 || x < 0.0) {
+	if (x>size || x < 0.0) {
 		return -1.0;
 	}
 	float y = distance;

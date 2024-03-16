@@ -28,7 +28,6 @@ surface_material_override/0 = SubResource("ShaderMaterial_nla1a")
 
 [node name="SubViewport" type="SubViewport" parent="." groups=["ping360viewport"]]
 process_mode = 3
-size = Vector2i(256, 256)
 render_target_update_mode = 4
 script = ExtResource("1_dhxlf")
 
