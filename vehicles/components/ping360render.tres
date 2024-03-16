@@ -25,42 +25,30 @@ float get_intensity_at_distance_angle(vec2 _UV, float distance, float angle) {
 			accum += abs(pixel - y);	
 		}
 	}
-	return accum + texture(noise, (_UV)+vec2(TIME)).r*0.25;
+	return accum + texture(noise, (_UV)+vec2(TIME*0.1)).r*0.25;
 }
 
 vec3 gradient(float value) {
-    float segment = 0.25; // Since there are 5 colors, creating 4 segments
-    
-    // Define colors
-    vec3 color0 = vec3(5.0/255.0, 34.0/255.0, 95.0/255.0);
-    vec3 color1 = vec3(106.0/255.0, 168.0/255.0, 79.0/255.0);
-    vec3 color2 = vec3(255.0/255.0, 255.0/255.0, 0.0/255.0);
-    vec3 color3 = vec3(127.0/255.0, 96.0/255.0, 0.0/255.0);
-    vec3 color4 = vec3(160.0/255.0, 15.0/255.0, 8.0/255.0);
-    
-    // Determine the gradient segment
-    if (value < segment) {
-        color1 = color0;
-        color2 = color1;
-        value = value / segment; // Normalize value to [0, 1] for interpolation
-    } else if (value < 2.0 * segment) {
-        color1 = color1;
-        color2 = color2;
-        value = (value - segment) / segment;
-    } else if (value < 3.0 * segment) {
-        color1 = color2;
-        color2 = color3;
-        value = (value - 2.0 * segment) / segment;
-    } else {
-        color1 = color3;
-        color2 = color4;
-        value = (value - 3.0 * segment) / segment;
-    }
-    
-    // Linearly interpolate between the two colors in the segment
-    return mix(color1, color2, value);
-}
+    // Define colors in an array
+    vec3 colors[5] = vec3[](
+        vec3(5.0/255.0, 34.0/255.0, 95.0/255.0),    // color0
+        vec3(106.0/255.0, 168.0/255.0, 79.0/255.0), // color1
+        vec3(255.0/255.0, 255.0/255.0, 0.0/255.0),  // color2
+        vec3(127.0/255.0, 96.0/255.0, 0.0/255.0),   // color3
+        vec3(160.0/255.0, 15.0/255.0, 8.0/255.0)    // color4
+    );
 
+    // Map value from [0, 1] to [0, 4) for indexing colors
+    value = value * 4.0;
+    int index = int(value);
+    index = clamp(index, 0, 3); // Ensure index is within bounds
+
+    // Normalize value to [0, 1] for interpolation
+    value = fract(value);
+
+    // Linearly interpolate between the two colors in the segment
+    return mix(colors[index], colors[index + 1], value);
+}
 
 void fragment() {
     //ALBEDO = vec3(float(get_array_value(ivec2(vec2(100.0, 360.0) * UV))));
