@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://btr1l5hx0wqm2"]
+[gd_scene load_steps=8 format=3 uid="uid://btr1l5hx0wqm2"]
 
 [ext_resource type="Script" path="res://vehicles/components/ping360/cameraCapture.gd" id="1_dhxlf"]
 [ext_resource type="Shader" uid="uid://bahuknu7g0bjb" path="res://vehicles/components/ping360/depth_maps.tres" id="1_jc5st"]
@@ -12,6 +12,10 @@ size = Vector3(0.1, 0.1, 0.1)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_nla1a"]
 render_priority = 0
 shader = ExtResource("1_jc5st")
+
+[sub_resource type="Environment" id="Environment_5s6ti"]
+ambient_light_source = 1
+reflected_light_source = 1
 
 [node name="ping360" type="MeshInstance3D" groups=["ping360"]]
 process_mode = 3
@@ -28,12 +32,15 @@ surface_material_override/0 = SubResource("ShaderMaterial_nla1a")
 
 [node name="SubViewport" type="SubViewport" parent="." groups=["ping360viewport"]]
 process_mode = 3
+debug_draw = 1
+positional_shadow_atlas_size = 0
 render_target_update_mode = 4
 script = ExtResource("1_dhxlf")
 
 [node name="Camera3D" type="Camera3D" parent="SubViewport"]
 process_mode = 3
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.08165e-12, 2.08165e-12, 2.08165e-12)
+environment = SubResource("Environment_5s6ti")
 fov = 25.0
 near = 0.2
 far = 10.0
