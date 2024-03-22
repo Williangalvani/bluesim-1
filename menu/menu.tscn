@@ -304,7 +304,7 @@ text = "Starting...
 "
 
 [node name="Timer" type="Timer" parent="HBoxContainer/Menu"]
-wait_time = 5.0
+wait_time = 0.5
 one_shot = true
 autostart = true
 
