@@ -12,6 +12,8 @@ size = Vector3(0.1, 0.1, 0.1)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_nla1a"]
 render_priority = 0
 shader = ExtResource("1_jc5st")
+shader_parameter/normal_strenght = 0.535
+shader_parameter/normal_threshold = 0.55
 
 [sub_resource type="Environment" id="Environment_5s6ti"]
 ambient_light_source = 1

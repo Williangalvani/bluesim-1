@@ -6,6 +6,9 @@ code = "// NOTE: Shader automatically converted from Godot Engine 4.2.1.stable's
 shader_type spatial;
 render_mode blend_mix,depth_draw_opaque,cull_disabled,diffuse_burley,specular_schlick_ggx,unshaded,shadows_disabled;
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
+uniform sampler2D normal_roughness_texture : hint_normal_roughness_texture, repeat_disable, filter_nearest;
+uniform float normal_strenght = 3.0;
+uniform float normal_threshold = 0.2;
 
 varying mat4 CAMERA;
 
@@ -26,9 +29,22 @@ void fragment() {
 	float linear_depth = sqrt(view.z*view.z + view.x*view.x + view.y*view.y);
 	linear_depth = pow(linear_depth, 2.0);
 	ALBEDO = vec3(min(max(linear_depth/50.0, 0.0), 1.0));
+    //float screen_roughness = texture(normal_roughness_texture, SCREEN_UV).w;
+    vec3 screen_normal = texture(normal_roughness_texture, SCREEN_UV).xyz;
+    screen_normal = screen_normal * 2.0 - 1.0;
+	float normal = clamp(1.0 - pow(dot(VIEW.xyz, screen_normal),normal_strenght),0.0,1.0);
 	ALPHA = 1.0;
 	METALLIC = 0.0;
 	ROUGHNESS = 0.0;
 	SPECULAR = 0.0;
+	if (normal >= normal_threshold) {
+		ALBEDO = vec3(1.0);
+	}
+	//ALBEDO = clamp(ALBEDO,0.0,1.0);
+	//ALBEDO = vec3(normal);
+	//ALBEDO = texture(normal_roughness_texture, SCREEN_UV).xyz;
+    //ALBEDO = view.xyz;//vec3 screen_normal = texture(normal_roughness_texture, SCREEN_UV).xyz;
+    //screen_normal = screen_normal * 2.0 - 1.0;
+	//ALBEDO = screen_normal;
 }
 "
