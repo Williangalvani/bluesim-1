@@ -12,6 +12,7 @@ var calculated_acceleration = Vector3(0, 0, 0)
 var buoyancy = 10* self.mass * self.gravity_scale  # Newtons
 var _initial_position = 0
 var phys_time = 0
+var last_com_time = Time.get_ticks_msec()
 
 @onready var light_glows = [$light_glow, $light_glow2, $light_glow3, $light_glow4]
 
@@ -27,6 +28,8 @@ func connect_fmd_in():
 
 func get_servos():
 	if udp.get_available_packet_count() == 0:
+		if Time.get_ticks_msec() - last_com_time > 1000:
+			peer = false
 		return
 
 	var buffer = StreamPeerBuffer.new()
@@ -47,7 +50,7 @@ func get_servos():
 	#print(_framerate)
 	buffer.seek(4)
 	var _framecount = buffer.get_u16()
-
+	last_com_time = Time.get_ticks_msec()
 	if magic != 18458:
 		return
 	for i in range(0, 17):
