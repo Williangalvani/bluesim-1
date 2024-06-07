@@ -78,7 +78,6 @@ func send_fdm():
 	var _acceleration = toFRD * calculated_acceleration * _basis
 
 	var accel = [_acceleration.x, _acceleration.y, _acceleration.z]
-
 	# var orientation = toFRD * Vector3(-rotation.x, - rotation.y, -rotation.z)
 	var quaternon = Basis(-_basis.z, _basis.x, _basis.y).rotated(Vector3(1, 0, 0), PI).rotated(Vector3(1, 0, 0), PI / 2).get_rotation_quaternion()
 
@@ -91,6 +90,7 @@ func send_fdm():
 	var _position = toNED * self.transform.origin
 	var pos = [_position.x, _position.y, _position.z]
 
+	print(accel[2], velo[2], pos[2])
 	var IMU_fmt = {"gyro": gyro, "accel_body": accel}
 	var JSON_fmt = {
 		"timestamp": phys_time,
@@ -174,9 +174,8 @@ func _physics_process(delta):
 	if Globals.isHTML5:
 		print("html5")
 		return
-	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
-	calculated_acceleration.y += 10
-	last_velocity = self.linear_velocity
+	calculated_acceleration = (self.linear_velocity - self.last_velocity) / delta
+	self.last_velocity = self.linear_velocity
 	get_servos()
 	if peer:
 		send_fdm()
