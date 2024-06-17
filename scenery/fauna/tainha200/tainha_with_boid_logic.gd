@@ -76,7 +76,7 @@ func random_vector():
 	return Vector3(randf_range(-0.1,0.1),randf_range(-0.1,0.1), randf())
 
 func apply_stay_in_water():
-	var water_level = 3.5
+	var water_level = 4.3
 	var water_force = Vector3.ZERO
 	if self.global_transform.origin.y > water_level:
 		water_force = Vector3(0, -5, 0)
