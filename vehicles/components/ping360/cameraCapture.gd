@@ -10,7 +10,7 @@ func _ready():
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	self.image = self.get_texture()
 	self.angle = $Camera3D.angle
 	self.fov = $Camera3D.fov

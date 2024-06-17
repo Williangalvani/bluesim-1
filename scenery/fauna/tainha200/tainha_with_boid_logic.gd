@@ -56,15 +56,14 @@ func apply_cohesion():
 	if self.num_neighbors == 0:
 		return
 	#var average_position = Vector3.ZERO
-	var scale = cohesion / self.num_neighbors
+	var scale_ = cohesion / self.num_neighbors
 	for node in self.neighbor_nodes:
-		self.steer_towards(node.global_transform.origin, scale)
+		self.steer_towards(node.global_transform.origin, scale_)
 
 ## Encourage nearby boids to move in the same direction
 func apply_alignment_and_separation():
 	if self.num_neighbors == 0:
 		return
-	var average_velocity = Vector3.ZERO
 	for node in self.neighbor_nodes:
 		var distance_sq = self.global_transform.origin.distance_squared_to(node.global_transform.origin)+0.01
 		# alignment

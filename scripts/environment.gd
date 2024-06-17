@@ -66,11 +66,11 @@ func update_fog():
 
 		#var fog_distance = max(50 + 1 * depth, 20)
 		#underwater_env.fog = fog_distance
-		var deep_factor = min(max(-depth / 50, 0), 1.0)
-		Globals.deep_factor = deep_factor
-		var new_color = Globals.surface_ambient.lerp(
-			Globals.deep_ambient, deep_factor
-		)
+		#var deep_factor = min(max(-depth / 50, 0), 1.0)
+		#Globals.deep_factor = deep_factor
+		#var new_color = Globals.surface_ambient.lerp(
+			#Globals.deep_ambient, deep_factor
+		#)
 		#Globals.current_ambient = new_color.darkened(0.5)
 		#underwater_env.background_color = new_color
 		#underwater_env.background_sky.sky_horizon_color = new_color

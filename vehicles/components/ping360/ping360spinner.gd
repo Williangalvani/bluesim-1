@@ -8,7 +8,7 @@ func _ready():
 	self.get_parent()
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	self.global_transform = $"../..".global_transform
 	self.angle = self.angle + deg_to_rad(self.fov)*0.9
 	self.transform = self.transform.rotated_local(Vector3(0,1,0), angle + PI)

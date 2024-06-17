@@ -4,7 +4,7 @@ extends Node
 
 var current_scene = null
 var loader = null
-var time_max = 1000/16 # ms
+
 # Control loading scene
 var wait_frames = 0
 

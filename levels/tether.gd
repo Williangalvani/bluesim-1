@@ -21,7 +21,7 @@ func _ready():
 		#addLink(parent, child, i)
 		#parent = child
 		#
-func addSection(_parent, i, angle = 0):
+func addSection(_parent, i, _angle = 0):
 	var section = SECTION.instantiate()
 	add_child(section)
 	section.global_position = self.global_position + section_length * (i+0.5)

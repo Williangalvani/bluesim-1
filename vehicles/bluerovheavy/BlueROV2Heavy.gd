@@ -171,9 +171,6 @@ func _physics_process(delta):
 		return
 	phys_time = phys_time + 1.0 / Globals.physics_rate
 	process_keys()
-	if Globals.isHTML5:
-		print("html5")
-		return
 	calculated_acceleration = (self.linear_velocity - self.last_velocity) / delta
 	self.last_velocity = self.linear_velocity
 	get_servos()

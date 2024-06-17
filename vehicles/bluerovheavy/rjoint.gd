@@ -14,7 +14,7 @@ func _ready():
 	starting_angle = base.transform.basis.x.signed_angle_to(claw.transform.basis.x,base.transform.basis.y)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
+func _process(_delta):
 	# calculate the angle between node_a and node_b at every frame:
 
 	var angle = base.transform.basis.x.signed_angle_to(claw.transform.basis.x,base.transform.basis.y) - starting_angle

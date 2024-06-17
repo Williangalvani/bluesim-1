@@ -73,8 +73,6 @@ var _total_pitch = 0.0
 
 var _direction = Vector3(0.0, 0.0, 0.0)
 var _speed = Vector3(0.0, 0.0, 0.0)
-var _gui
-
 var _triggered=false
 
 const ROTATION_MULTIPLIER = 500

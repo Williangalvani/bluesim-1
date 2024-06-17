@@ -7,8 +7,8 @@ var raycast = preload("res://scenery/fauna/tainha200/raycast.tscn")
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	$AnimationPlayer.play("Animation")
+	$AnimationPlayer.play("spinprops")
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	pass
+#func _process(delta):
+	#pass

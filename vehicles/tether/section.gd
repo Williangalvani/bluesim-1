@@ -2,7 +2,7 @@ extends RigidBody3D
 
 const DRAG = 0.2
 
-func _physics_process(delta):
+func _physics_process(_delta):
 	var underwater = global_transform.origin.y < 3.6
 	if underwater: 
 		var forward = self.transform.basis.z.normalized()

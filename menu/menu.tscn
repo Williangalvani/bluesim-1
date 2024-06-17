@@ -69,7 +69,7 @@ func _all_files_downloaded():
 	elif OS.get_name() == \"Linux\":
 		return len(downloaded_files) == 1
 		
-func _on_download_finished(_result, _response_code, headers, body, file_name):
+func _on_download_finished(_result, _response_code, _headers, _body, file_name):
 	add_status(\"done downloading \" + file_name)
 	downloaded_files.append(file_name)
 	if _all_files_downloaded():
