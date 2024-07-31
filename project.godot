@@ -31,7 +31,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/thruster_nodes/plugin.cfg")
+enabled=PackedStringArray()
 
 [input]
 

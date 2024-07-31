@@ -1,4 +1,4 @@
-[gd_scene load_steps=36 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=38 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
@@ -17,6 +17,8 @@
 [ext_resource type="Texture2D" uid="uid://d1mr028oy6oc0" path="res://blender_sources/eliot.png" id="10_t7mob"]
 [ext_resource type="PackedScene" uid="uid://dp8qy3ckiq3c" path="res://scenery/fauna/tainha200/fish_school.tscn" id="17_a33fh"]
 [ext_resource type="PackedScene" uid="uid://df5m8b4703t4q" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn" id="17_wb6uh"]
+[ext_resource type="PackedScene" uid="uid://r1dwbr5h31d1" path="res://scenery/misc/tags/aruco/333.tscn" id="18_mo74k"]
+[ext_resource type="PackedScene" uid="uid://coexso6opmgea" path="res://scenery/misc/tags/checker.tscn" id="19_wx3ov"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ifx0o"]
 size = Vector3(0.33606, 0.388695, 2.73244)
@@ -266,5 +268,11 @@ transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-
 
 [node name="fish_school" parent="." instance=ExtResource("17_a33fh")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.84672, 1.19039, -0.411715)
+
+[node name="333" parent="." instance=ExtResource("18_mo74k")]
+transform = Transform3D(0.46398, 0, 0, 0, 0.46398, 0, 0, 0, 0.46398, -1.44828, 2.81528, -0.989018)
+
+[node name="336" parent="." instance=ExtResource("19_wx3ov")]
+transform = Transform3D(1.91069e-15, -4.37114e-08, 1, -1, -4.37114e-08, 0, 4.37114e-08, -1, -4.37114e-08, -3.4704, 2.39925, 0.398182)
 
 [connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]

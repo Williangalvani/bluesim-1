@@ -375,7 +375,7 @@ spot_angle_attenuation = 0.48
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.00410311, 0.0132817, 0.378081)
 cull_mask = 1048573
 environment = ExtResource("4")
-fov = 80.0
+fov = 100.0
 far = 640.7
 
 [node name="bluerov cleaned decimated2" parent="BlueRov" instance=ExtResource("5_8sfg2")]
