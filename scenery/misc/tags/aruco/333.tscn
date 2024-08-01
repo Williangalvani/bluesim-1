@@ -1,14 +1,14 @@
 [gd_scene load_steps=4 format=3 uid="uid://r1dwbr5h31d1"]
 
-[ext_resource type="Texture2D" uid="uid://qg4ps6l705a8" path="res://scenery/misc/tags/aruco/333.png" id="1_53a63"]
+[ext_resource type="Texture2D" uid="uid://bdnsfixlsi0ft" path="res://scenery/misc/tags/aruco/aruco_333.png" id="1_8s8ve"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_8ngva"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kgvhw"]
-albedo_texture = ExtResource("1_53a63")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glflc"]
+albedo_texture = ExtResource("1_8s8ve")
 
 [node name="333" type="Node3D"]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("QuadMesh_8ngva")
-surface_material_override/0 = SubResource("StandardMaterial3D_kgvhw")
+surface_material_override/0 = SubResource("StandardMaterial3D_glflc")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=17 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
@@ -7,6 +7,8 @@
 [ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
 [ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
 [ext_resource type="PackedScene" uid="uid://dykuk62nuk0bf" path="res://scenery/misc/floatHeavy.tscn" id="10_ivl5n"]
+[ext_resource type="PackedScene" uid="uid://case1avmwtop7" path="res://scenery/misc/tags/aruco/999.tscn" id="12_wle4a"]
+[ext_resource type="PackedScene" uid="uid://dg2f1dnjbktv4" path="res://scenery/misc/tags/aruco/666.tscn" id="13_oubb7"]
 [ext_resource type="PackedScene" uid="uid://dp8qy3ckiq3c" path="res://scenery/fauna/tainha200/fish_school.tscn" id="17_a33fh"]
 [ext_resource type="PackedScene" uid="uid://df5m8b4703t4q" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn" id="17_wb6uh"]
 [ext_resource type="PackedScene" uid="uid://r1dwbr5h31d1" path="res://scenery/misc/tags/aruco/333.tscn" id="18_mo74k"]
@@ -24,7 +26,7 @@ emission = Color(0.270588, 0.380392, 0.827451, 1)
 edge_fade = 0.22974
 
 [node name="pool" type="Node3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.269, 0.8, 2.08165e-12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.62013, 0.303004, 2.08165e-12)
 script = ExtResource("1_yjnbp")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -113,7 +115,13 @@ transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.289883, 3.1459, -0.379578)
 
 [node name="333" parent="." instance=ExtResource("18_mo74k")]
-transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.63677, 3.1508, 0.348837)
+transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.70842, 3.49818, -1.45495)
 
 [node name="336" parent="." instance=ExtResource("19_wx3ov")]
-transform = Transform3D(1.91069e-15, -4.37114e-08, 1, -1, -4.37114e-08, 0, 4.37114e-08, -1, -4.37114e-08, -4.66682, 2.84057, 0.398182)
+transform = Transform3D(-5.73206e-15, 1.31134e-07, -1, -1, -4.37114e-08, 0, -4.37114e-08, 1, 1.31134e-07, 4.69513, 3.19167, 1.21096)
+
+[node name="334" parent="." instance=ExtResource("12_wle4a")]
+transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.7, 3.49, -0.4)
+
+[node name="335" parent="." instance=ExtResource("13_oubb7")]
+transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.708, 2.49, -1.458)
