@@ -1,90 +1,27 @@
-[gd_scene load_steps=38 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=15 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
 [ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="2_1wm7m"]
-[ext_resource type="Material" uid="uid://ccisi0op6ivuu" path="res://scenery/shaders/caustic_pool_wall.tres" id="3_8fh1v"]
 [ext_resource type="PackedScene" uid="uid://bmu2nklfby35h" path="res://scenery/misc/red_basket_area.tscn" id="3_yqncf"]
-[ext_resource type="PackedScene" uid="uid://ds67lupctpkdq" path="res://scenery/misc/button.tscn" id="4_oagsn"]
 [ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
 [ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
-[ext_resource type="Texture2D" uid="uid://d2qha4gd4x604" path="res://addons/controller_icons/assets/xbox360/rt.png" id="7_5rhw3"]
-[ext_resource type="Texture2D" uid="uid://dhhjoq01cc2oh" path="res://addons/controller_icons/assets/xbox360/lt.png" id="8_agoxp"]
-[ext_resource type="PackedScene" uid="uid://cxacf0xgo7kq5" path="res://blender_sources/pool_ladder.blend" id="9_rtdlm"]
-[ext_resource type="Texture2D" uid="uid://nk2eyp23eiup" path="res://addons/controller_icons/assets/ps4/r_stick_click.png" id="9_s44lc"]
-[ext_resource type="Texture2D" uid="uid://dyste7anvays1" path="res://addons/controller_icons/assets/ps4/l_stick_click.png" id="10_824ux"]
 [ext_resource type="PackedScene" uid="uid://dykuk62nuk0bf" path="res://scenery/misc/floatHeavy.tscn" id="10_ivl5n"]
-[ext_resource type="Texture2D" uid="uid://d1mr028oy6oc0" path="res://blender_sources/eliot.png" id="10_t7mob"]
 [ext_resource type="PackedScene" uid="uid://dp8qy3ckiq3c" path="res://scenery/fauna/tainha200/fish_school.tscn" id="17_a33fh"]
 [ext_resource type="PackedScene" uid="uid://df5m8b4703t4q" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn" id="17_wb6uh"]
 [ext_resource type="PackedScene" uid="uid://r1dwbr5h31d1" path="res://scenery/misc/tags/aruco/333.tscn" id="18_mo74k"]
 [ext_resource type="PackedScene" uid="uid://coexso6opmgea" path="res://scenery/misc/tags/checker.tscn" id="19_wx3ov"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_ifx0o"]
-size = Vector3(0.33606, 0.388695, 2.73244)
-
-[sub_resource type="BoxMesh" id="BoxMesh_rtjfd"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ydrio"]
-albedo_color = Color(0.0509804, 0, 0.811765, 1)
-
-[sub_resource type="TextMesh" id="TextMesh_g4try"]
-material = SubResource("StandardMaterial3D_ydrio")
-text = "Press the red button
-to open the door"
-
-[sub_resource type="TextMesh" id="TextMesh_p42q6"]
-material = SubResource("StandardMaterial3D_ydrio")
-text = "Use         and       
-to move around"
-
-[sub_resource type="TextMesh" id="TextMesh_50nbi"]
-material = SubResource("StandardMaterial3D_ydrio")
-text = "Press
-to tilt the camera"
-horizontal_alignment = 0
-
-[sub_resource type="QuadMesh" id="QuadMesh_v1kub"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m2817"]
-transparency = 1
-albedo_texture = ExtResource("7_5rhw3")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_88yu7"]
-transparency = 1
-albedo_texture = ExtResource("8_agoxp")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pkgod"]
-transparency = 1
-albedo_texture = ExtResource("9_s44lc")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6nr23"]
-transparency = 1
-albedo_texture = ExtResource("10_824ux")
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_6nrsx"]
 size = Vector3(1, 1, 2.97754)
 
 [sub_resource type="BoxMesh" id="BoxMesh_4t7nt"]
 
-[sub_resource type="QuadMesh" id="QuadMesh_id2ev"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cobvb"]
-transparency = 1
-albedo_texture = ExtResource("10_t7mob")
-
-[sub_resource type="FogMaterial" id="FogMaterial_fnnq2"]
-density = 0.5
-albedo = Color(0.411765, 0.423529, 0.490196, 1)
-edge_fade = 0.0189465
-
 [sub_resource type="FogMaterial" id="FogMaterial_nuaoi"]
 density = 0.5
 albedo = Color(0.356863, 0.639216, 0.772549, 1)
 emission = Color(0.270588, 0.380392, 0.827451, 1)
 edge_fade = 0.22974
-
-[sub_resource type="PlaneMesh" id="PlaneMesh_xuokh"]
 
 [node name="pool" type="Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.269, 0.8, 2.08165e-12)
@@ -103,88 +40,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.2411, -0.837554, -5.5)
 size = Vector3(51.3516, 9.41559, 26)
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.68741, 1.80322, -0.0961914)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.04628, 2.08165e-12)
 operation = 2
-size = Vector3(15.1484, 7.39355, 13.1924)
-
-[node name="CSGBox3D4" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.43991, 3.7141, 0.5)
-operation = 2
-size = Vector3(11.8798, 5, 3)
-
-[node name="CSGBox3D3" type="CSGBox3D" parent="CSGCombiner3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.36351, -0.67631, -0.113237)
-operation = 2
-size = Vector3(13.2265, 2.33569, 2.39475)
+size = Vector3(9.43, 2.12345, 4.61)
 
 [node name="redBasketArea" parent="." instance=ExtResource("3_yqncf")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.90856, 2.02227, -4.12708)
-
-[node name="Button" parent="." instance=ExtResource("4_oagsn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.493484, 2.68389, -1.22841)
-
-[node name="door" type="RigidBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.246898, 1.31587, -0.0780612)
-can_sleep = false
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="door"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0188149, 0.610328, 0.631188)
-shape = SubResource("BoxShape3D_ifx0o")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="door"]
-transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 0.606847, 0.631351)
-mesh = SubResource("BoxMesh_rtjfd")
-surface_material_override/0 = ExtResource("3_8fh1v")
-
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="door"]
-transform = Transform3D(1.00326, 0, 0, 0, 1.00326, 0, 0, 0, 1.00326, 0.0188149, 1.36408, 0.631188)
-shape = SubResource("BoxShape3D_ifx0o")
-
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="door"]
-transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 1.3685, 0.631351)
-mesh = SubResource("BoxMesh_rtjfd")
-surface_material_override/0 = ExtResource("3_8fh1v")
-
-[node name="CollisionShape3D3" type="CollisionShape3D" parent="door"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0188149, 2.10498, 0.631188)
-shape = SubResource("BoxShape3D_ifx0o")
-
-[node name="MeshInstance3D3" type="MeshInstance3D" parent="door"]
-transform = Transform3D(0.286213, 0, 0, 0, 0.380314, 0, 0, 0, 2.73176, 0, 2.11175, 0.631351)
-mesh = SubResource("BoxMesh_rtjfd")
-surface_material_override/0 = ExtResource("3_8fh1v")
-
-[node name="MeshInstance3D4" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 2.12505, 0.540749)
-mesh = SubResource("TextMesh_g4try")
-
-[node name="MeshInstance3D8" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 1.36536, 0.540749)
-mesh = SubResource("TextMesh_p42q6")
-
-[node name="MeshInstance3D5" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.129619, 0.622054, -0.124766)
-mesh = SubResource("TextMesh_50nbi")
-
-[node name="MeshInstance3D6" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-1.19723e-08, 0, -0.273894, 0, 0.273894, 0, 0.273894, 0, -1.19723e-08, -0.18804, 0.713826, 0.819137)
-mesh = SubResource("QuadMesh_v1kub")
-surface_material_override/0 = SubResource("StandardMaterial3D_m2817")
-
-[node name="MeshInstance3D7" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-1.19723e-08, 0, -0.273894, 0, 0.273894, 0, 0.273894, 0, -1.19723e-08, -0.181655, 0.718852, 0.481267)
-mesh = SubResource("QuadMesh_v1kub")
-surface_material_override/0 = SubResource("StandardMaterial3D_88yu7")
-
-[node name="MeshInstance3D9" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-9.04896e-09, 0, -0.207016, 0, 0.207016, 0, 0.207016, 0, -9.04896e-09, -0.157642, 1.48247, 1.03923)
-mesh = SubResource("QuadMesh_v1kub")
-surface_material_override/0 = SubResource("StandardMaterial3D_pkgod")
-
-[node name="MeshInstance3D10" type="MeshInstance3D" parent="door"]
-transform = Transform3D(-9.04896e-09, 0, -0.207016, 0, 0.207016, 0, 0.207016, 0, -9.04896e-09, -0.152816, 1.48193, 0.468068)
-mesh = SubResource("QuadMesh_v1kub")
-surface_material_override/0 = SubResource("StandardMaterial3D_6nr23")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.71942, 2.02227, -4.12708)
 
 [node name="cageDoorJoint" type="JoltSliderJoint3D" parent="."]
 limit_enabled = true
@@ -193,7 +54,6 @@ limit_lower = -1.26
 limit_spring_enabled = true
 motor_enabled = true
 motor_max_force = 100.0
-node_a = NodePath("../door")
 node_b = NodePath("../StaticBody3D")
 transform = Transform3D(0, 4.37114e-08, 1, 1, -4.37114e-08, 0, 4.37114e-08, 1, -4.37114e-08, -7.641e-08, 2.71518, 0.649459)
 script = ExtResource("5_01oyj")
@@ -235,27 +95,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.12186, 1.8331, -2.81107)
 [node name="Node3D3" parent="." instance=ExtResource("10_ivl5n")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.83878, 1.8331, -3.50688)
 
-[node name="pool_ladder" parent="." instance=ExtResource("9_rtdlm")]
-transform = Transform3D(-4.37114e-08, -8.74228e-08, -1, 0, -1, 8.74228e-08, -1, 3.82137e-15, 4.37114e-08, 14.7937, 2.59781, -6.34179)
-
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.454271, 0, 0, 0, 0.454271, 0, 0, 0, 0.454271, 14.5794, 2.25338, -5.88484)
-mesh = SubResource("QuadMesh_id2ev")
-surface_material_override/0 = SubResource("StandardMaterial3D_cobvb")
-
-[node name="DarkFog" type="FogVolume" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.87407, -2.6907, 0.0249755)
-size = Vector3(18.1184, 8.14603, 11.0631)
-material = SubResource("FogMaterial_fnnq2")
-
 [node name="PoolFog" type="FogVolume" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.28746, -0.773578, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.42155, -0.773578, 0)
 size = Vector3(25.4349, 24.5782, 28.2668)
 material = SubResource("FogMaterial_nuaoi")
-
-[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
-transform = Transform3D(10.1692, 0, 0, 0, 1, 0, 0, 0, 2.99081, -9.8651, 0.796415, 0)
-mesh = SubResource("PlaneMesh_xuokh")
 
 [node name="RigidBody3D5" parent="." groups=["boid"] instance=ExtResource("17_wb6uh")]
 transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-16, -3.48787e-16, 3.48787e-16, 1, -1.20002, 2.86251, 0.757516)
@@ -267,12 +110,10 @@ transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-
 transform = Transform3D(1, -3.48787e-16, 3.48787e-16, 3.48787e-16, 1, -3.48787e-16, -3.48787e-16, 3.48787e-16, 1, -1.20002, 3.22245, 0.712489)
 
 [node name="fish_school" parent="." instance=ExtResource("17_a33fh")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.84672, 1.19039, -0.411715)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.289883, 3.1459, -0.379578)
 
 [node name="333" parent="." instance=ExtResource("18_mo74k")]
-transform = Transform3D(0.46398, 0, 0, 0, 0.46398, 0, 0, 0, 0.46398, -1.44828, 2.81528, -0.989018)
+transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.63677, 3.1508, 0.348837)
 
 [node name="336" parent="." instance=ExtResource("19_wx3ov")]
-transform = Transform3D(1.91069e-15, -4.37114e-08, 1, -1, -4.37114e-08, 0, 4.37114e-08, -1, -4.37114e-08, -3.4704, 2.39925, 0.398182)
-
-[connection signal="got_pressed" from="Button" to="cageDoorJoint" method="_on_button_got_pressed"]
+transform = Transform3D(1.91069e-15, -4.37114e-08, 1, -1, -4.37114e-08, 0, 4.37114e-08, -1, -4.37114e-08, -4.66682, 2.84057, 0.398182)

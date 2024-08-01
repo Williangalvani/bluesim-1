@@ -172,6 +172,11 @@ func _on_poolLevel_pressed():
 	Globals.active_level = \"res://levels/pool.tscn\"
 	SceneLoader.goto_scene(\"res://levels/baselevel.tscn\")
 
+func _on_brpoolLevel_pressed():
+	Globals.active_vehicle = \"bluerovheavy\"
+	Globals.active_level = \"res://levels/brpool.tscn\"
+	SceneLoader.goto_scene(\"res://levels/baselevel.tscn\")
+
 func _on_CheckBox_toggled(button_pressed):
 	Globals.wait_SITL = button_pressed
 
@@ -187,6 +192,9 @@ func _on_timer_timeout():
 	var args = Array(OS.get_cmdline_args())
 	if args.has(\"--pool\"):
 		self._on_poolLevel_pressed()
+	if args.has(\"--brpool\"):
+		self._on_poolLevel_pressed()
+
 "
 
 [sub_resource type="Animation" id="2"]

@@ -72,12 +72,12 @@ func send_fdm():
 
 	var toFRD = Basis(Vector3(0, -1, 0), Vector3(0, 0, -1), Vector3(1, 0, 0))
 
-	var _angular_velocity = toFRD * angular_velocity * _basis
+	var _angular_velocity = toFRD * angular_velocity#  * _basis
 	var gyro = [_angular_velocity.x, _angular_velocity.y, _angular_velocity.z]
 
 	var _acceleration = toFRD * calculated_acceleration * _basis
 
-	var accel = [_acceleration.x, _acceleration.y, _acceleration.z]
+	var accel = [_acceleration.x, _acceleration.y, _acceleration.z - 1]
 	# var orientation = toFRD * Vector3(-rotation.x, - rotation.y, -rotation.z)
 	var quaternon = Basis(-_basis.z, _basis.x, _basis.y).rotated(Vector3(1, 0, 0), PI).rotated(Vector3(1, 0, 0), PI / 2).get_rotation_quaternion()
 
