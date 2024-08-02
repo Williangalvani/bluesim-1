@@ -337,6 +337,7 @@ mouse_mode = 0
 collisions = false
 
 [node name="Camera3D" type="Camera3D" parent="ViewportCamera/SubViewport/playerCamera" groups=["cameras"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.17685, -9.91703, 0.0562369)
 current = true
 far = 275.0
 

@@ -1,5 +1,5 @@
 ea4bc82a6ad023ab7ee23ee620429895
-::res://::1722608640
+::res://::1722623449
 camera.gd::GDScript::-1::1722441850::0::1::::FreeLookCamera<>Camera3D<>::
 export_presets.cfg::TextFile::-1::1722441850::0::1::::<><>::
 Globals.tscn::PackedScene::4718608995198777142::1722441849::0::1::::<><>::res://scripts/globals.gd
@@ -363,27 +363,27 @@ image (1).png::CompressedTexture2D::9218737999342174628::1722475856::1722475856:
 ::res://fonts/::1722442386
 Square.ttf::FontFile::1937771981576483262::1722441850::1722442386::1::::<><>::
 squareFont.tres::FontFile::-1::1722441850::0::1::::<><>::uid://2uw26tjgbd4q::::res://fonts/Square.ttf
-::res://levels/::1722570533
+::res://levels/::1722609574
 baselevel.gd::GDScript::-1::1722441850::0::1::::<>Control<>::
-baselevel.tscn::PackedScene::5548195019724795763::1722570533::0::1::::<><>::res://scripts/settings.gd<>res://menu/SubViewport.gd<>res://levels/camera/targetPos.gd<>res://levels/tether.gd<>res://levels/baselevel.gd<>uid://cqgrgysdqshgm::::res://scenery/shaders/underwater.tres<>uid://d0rv01klybh31::::res://vehicles/bluerovheavy/BlueRovHeavy.tscn<>uid://bqefm2sjfvjij::::res://vehicles/components/ping360render.tres<>res://vehicles/components/ping360/ping360display.gd
+baselevel.tscn::PackedScene::5548195019724795763::1722609574::0::1::::<><>::res://scripts/settings.gd<>res://menu/SubViewport.gd<>res://levels/camera/targetPos.gd<>res://levels/tether.gd<>res://levels/baselevel.gd<>uid://cqgrgysdqshgm::::res://scenery/shaders/underwater.tres<>uid://d0rv01klybh31::::res://vehicles/bluerovheavy/BlueRovHeavy.tscn<>uid://bqefm2sjfvjij::::res://vehicles/components/ping360render.tres<>res://vehicles/components/ping360/ping360display.gd
 boidtestscene.tscn::PackedScene::4924783236949549131::1722441850::0::1::::<><>::res://camera.gd<>uid://dp8qy3ckiq3c::::res://scenery/fauna/tainha200/fish_school.tscn
 brpool.tscn::PackedScene::1542349978299234488::1722475856::0::1::::<><>::res://scripts/environment.gd<>uid://dk0nt41fjw0nr::::res://scenery/underwaterEnvironment.tres<>uid://cudkycx02ps38::::res://scenery/shaders/caustic_pool_tile.tres<>uid://bmu2nklfby35h::::res://scenery/misc/red_basket_area.tscn<>uid://ds67lupctpkdq::::res://scenery/misc/button.tscn<>uid://ccisi0op6ivuu::::res://scenery/shaders/caustic_pool_wall.tres<>uid://d2qha4gd4x604::::res://addons/controller_icons/assets/xbox360/rt.png<>uid://dhhjoq01cc2oh::::res://addons/controller_icons/assets/xbox360/lt.png<>uid://nk2eyp23eiup::::res://addons/controller_icons/assets/ps4/r_stick_click.png<>uid://dyste7anvays1::::res://addons/controller_icons/assets/ps4/l_stick_click.png<>res://levels/cageDoorJoint.gd<>uid://bfjb2vce6wql2::::res://scenery/misc/float.tscn<>uid://dykuk62nuk0bf::::res://scenery/misc/floatHeavy.tscn<>uid://cxacf0xgo7kq5::::res://blender_sources/pool_ladder.blend<>uid://d1mr028oy6oc0::::res://blender_sources/eliot.png<>uid://df5m8b4703t4q::::res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn<>uid://dp8qy3ckiq3c::::res://scenery/fauna/tainha200/fish_school.tscn<>uid://r1dwbr5h31d1::::res://scenery/misc/tags/aruco/333.tscn<>uid://coexso6opmgea::::res://scenery/misc/tags/checker.tscn
 cageDoorJoint.gd::GDScript::-1::1722441850::0::1::::<>JoltSliderJoint3D<>::
 ping360.gdshader::Shader::-1::1722441850::0::1::::<><>::
-pool.tscn::PackedScene::705428549784150256::1722570533::0::1::::<><>::uid://cudkycx02ps38::::res://scenery/shaders/caustic_pool_tile.tres<>res://scripts/environment.gd<>uid://bmu2nklfby35h::::res://scenery/misc/red_basket_area.tscn<>res://levels/cageDoorJoint.gd<>uid://bfjb2vce6wql2::::res://scenery/misc/float.tscn<>uid://dykuk62nuk0bf::::res://scenery/misc/floatHeavy.tscn<>uid://case1avmwtop7::::res://scenery/misc/tags/aruco/999.tscn<>uid://dg2f1dnjbktv4::::res://scenery/misc/tags/aruco/666.tscn<>uid://dp8qy3ckiq3c::::res://scenery/fauna/tainha200/fish_school.tscn<>uid://df5m8b4703t4q::::res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn<>uid://r1dwbr5h31d1::::res://scenery/misc/tags/aruco/333.tscn<>uid://coexso6opmgea::::res://scenery/misc/tags/checker.tscn
+pool.tscn::PackedScene::705428549784150256::1722609574::0::1::::<><>::uid://cudkycx02ps38::::res://scenery/shaders/caustic_pool_tile.tres<>res://scripts/environment.gd<>uid://bmu2nklfby35h::::res://scenery/misc/red_basket_area.tscn<>res://levels/cageDoorJoint.gd<>uid://bfjb2vce6wql2::::res://scenery/misc/float.tscn<>uid://dykuk62nuk0bf::::res://scenery/misc/floatHeavy.tscn<>uid://case1avmwtop7::::res://scenery/misc/tags/aruco/999.tscn<>uid://dg2f1dnjbktv4::::res://scenery/misc/tags/aruco/666.tscn<>uid://dp8qy3ckiq3c::::res://scenery/fauna/tainha200/fish_school.tscn<>uid://df5m8b4703t4q::::res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn<>uid://r1dwbr5h31d1::::res://scenery/misc/tags/aruco/333.tscn<>uid://coexso6opmgea::::res://scenery/misc/tags/checker.tscn
 tether.gd::GDScript::-1::1722441850::0::1::::<>Node<>::
 ::res://levels/camera/::1722441850
 InterpolatedCamera.gd::GDScript::-1::1722441850::0::1::::<>Camera3D<>::
 targetPos.gd::GDScript::-1::1722441850::0::1::::<>Node3D<>::
-::res://menu/::1722570533
-menu.tscn::PackedScene::899084356960886935::1722570533::0::1::::<><>::res://menu/menuEnvironment.tres<>uid://u3a6ab83b0jv::::res://blender_sources/bluerov2.blend
+::res://menu/::1722609574
+menu.tscn::PackedScene::899084356960886935::1722609574::0::1::::<><>::res://menu/menuEnvironment.tres<>uid://u3a6ab83b0jv::::res://blender_sources/bluerov2.blend
 menuEnvironment.tres::Environment::-1::1722440853::0::1::::<><>::
 SubViewport.gd::GDScript::-1::1722441850::0::1::::<>SubViewport<>::
-::res://scenery/::1722570533
-defaultEnvironment.tres::Environment::457180298420964596::1722570533::0::1::::<><>::
+::res://scenery/::1722609574
+defaultEnvironment.tres::Environment::457180298420964596::1722623525::0::1::::<><>::
 scene.gdshader::Shader::-1::1722441850::0::1::::<><>::
 t200ainha.tscn::PackedScene::1920070663580672840::1722441850::0::1::::<><>::
-underwaterEnvironment.tres::Environment::7913584745883445647::1722569891::0::1::::<><>::
+underwaterEnvironment.tres::Environment::7913584745883445647::1722623525::0::1::::<><>::
 ::res://scenery/fauna/::1722441850
 ::res://scenery/fauna/tainha200/::1722475856
 fish_school.tscn::PackedScene::243565734608260634::1722475856::0::1::::<><>::uid://df5m8b4703t4q::::res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn
@@ -407,23 +407,24 @@ buoyheavy.gd::GDScript::-1::1722441850::0::1::::<>RigidBody3D<>::
 loading.tscn::PackedScene::4561831859980171255::1722441850::0::1::::<><>::
 ::res://scenery/misc/tags/::1722441850
 checker.tscn::PackedScene::5765172108331270000::1722441850::0::1::::<><>::uid://byq72b0w4n52i::::res://scenery/misc/tags/cv/checker.png
-::res://scenery/misc/tags/aruco/::1722549801
+::res://scenery/misc/tags/aruco/::1722609574
 333.png::CompressedTexture2D::1137196338284486913::1722441850::1722442386::1::::<><>::
 333.tscn::PackedScene::1247105682054884792::1722549801::0::1::::<><>::uid://bdnsfixlsi0ft::::res://scenery/misc/tags/aruco/aruco_333.png
-666.tscn::PackedScene::7636483505935649779::1722549801::0::1::::<><>::uid://cv10a7bmcm450::::res://scenery/misc/tags/aruco/aruco_666.png
+666.tscn::PackedScene::7636483505935649779::1722609574::0::1::::<><>::uid://cv10a7bmcm450::::res://scenery/misc/tags/aruco/aruco_666.png
 999.tscn::PackedScene::4810289498588151950::1722549801::0::1::::<><>::uid://d2b210ya5i0ku::::res://scenery/misc/tags/aruco/aruco_999.png
 aruco_111.png::CompressedTexture2D::7260988183594151858::1722549801::1722549801::1::::<><>::
-aruco_222.png::CompressedTexture2D::368219695575702451::1722549801::1722549801::1::::<><>::
+aruco_222.png::CompressedTexture2D::368219695575702451::1722549801::1722623538::1::::<><>::
 aruco_333.png::CompressedTexture2D::2624926416490786081::1722549801::1722549801::1::::<><>::
 aruco_666.png::CompressedTexture2D::6302000513050010953::1722549801::1722549801::1::::<><>::
 aruco_999.png::CompressedTexture2D::9058112346705952492::1722549801::1722549801::1::::<><>::
+222.tscn::PackedScene::6415273449513945961::1722623525::0::1::::<><>::uid://d2b210ya5i0ku::::res://scenery/misc/tags/aruco/aruco_999.png
 ::res://scenery/misc/tags/cv/::1722442387
 calib.png::CompressedTexture2D::3157119090858392029::1722441850::1722442387::1::::<><>::
 checker.png::CompressedTexture2D::4105974227457133902::1722441850::1722442386::1::::<><>::
-::res://scenery/shaders/::1722569891
+::res://scenery/shaders/::1722608699
 alpha-fix.png::CompressedTexture2D::353428408392107881::1722441850::1722442386::1::::<><>::
 caustic_only.gdshader::Shader::-1::1722441850::0::1::::<><>::
-caustic_pool_tile.tres::ShaderMaterial::6183461544140191145::1722569891::0::1::::<><>::uid://bj45lfhomrpqr::::res://blender_sources/materials/pool_tiles_albedo.png<>uid://7xm0omqxmkdx::::res://blender_sources/materials/pool_tiles_metal.exr<>uid://bf3rh8mgycrjv::::res://blender_sources/materials/pool_tiles_normal.png
+caustic_pool_tile.tres::ShaderMaterial::6183461544140191145::1722623525::0::1::::<><>::uid://bj45lfhomrpqr::::res://blender_sources/materials/pool_tiles_albedo.png<>uid://7xm0omqxmkdx::::res://blender_sources/materials/pool_tiles_metal.exr<>uid://bf3rh8mgycrjv::::res://blender_sources/materials/pool_tiles_normal.png
 caustic_pool_wall.tres::ShaderMaterial::4930842604350093216::1722450299::0::1::::<><>::uid://nw4om5et5tso::::res://scenery/shaders/shader_textures/wood/Wood034_1K-JPG_Color.jpg<>uid://b5tf6w777td5j::::res://scenery/shaders/shader_textures/wood/Wood034_1K-JPG_Displacement.jpg<>uid://bm3dolc7cnw60::::res://scenery/shaders/shader_textures/wood/Wood034_1K-JPG_Roughness.jpg<>uid://fd2lfce25vbp::::res://scenery/shaders/shader_textures/wood/Wood034_1K-JPG_NormalGL.jpg
 godrays.gdshader::Shader::-1::1722441850::0::1::::<><>::
 new_shader_include.gdshaderinc::ShaderInclude::-1::1722441850::0::1::::<><>::
@@ -489,24 +490,24 @@ Ping360Viewport.gd::GDScript::-1::1722441850::0::1::::<>SubViewportContainer<>::
 scene_loader.gd::GDScript::-1::1722441850::0::1::::<>Node<>::
 settings.gd::GDScript::-1::1722441850::0::1::::<>PanelContainer<>::
 ::res://vehicles/::1722441850
-::res://vehicles/bluerovheavy/::1722570533
+::res://vehicles/bluerovheavy/::1722609574
 acrilic.material::StandardMaterial3D::7497650261551906594::1722441850::0::1::::<><>::
 blackmetal.tres::StandardMaterial3D::67218037126158697::1722441850::0::1::::<><>::
 BlueROV2Heavy.gd::GDScript::-1::1722475856::0::1::::<>RigidBody3D<>::
 bluerov cleaned decimated.gltf::PackedScene::5849561266214637956::1722440854::1722442462::1::::<><>::
-BlueRovHeavy.tscn::PackedScene::8950398647131905110::1722570533::0::1::::<><>::res://vehicles/bluerovheavy/BlueROV2Heavy.gd<>res://vehicles/bluerovheavy/ljoint.gd<>uid://d2pk0jdvrv5gh::::res://vehicles/components/newton.tscn<>res://vehicles/bluerovheavy/rjoint.gd<>uid://7tcomo83twb::::res://vehicles/bluerovheavy/blackmetal.tres<>res://vehicles/components/Plastic black.material<>uid://dk0nt41fjw0nr::::res://scenery/underwaterEnvironment.tres<>uid://1wagv83d1du3::::res://vehicles/bluerovheavy/bluerov_cleaned_decimated_colorfixed.tscn<>uid://btr1l5hx0wqm2::::res://vehicles/components/ping360.tscn<>uid://dyoxl3tmy5jyu::::res://vehicles/bluerovheavy/lights.tres<>uid://d1ycf6y3di02h::::res://scenery/shaders/suspended_particle_shader.tres<>uid://cw4vusa7mtobl::::res://scenery/shaders/shader_textures/white-alpha-fix.png
+BlueRovHeavy.tscn::PackedScene::8950398647131905110::1722609574::0::1::::<><>::res://vehicles/bluerovheavy/BlueROV2Heavy.gd<>res://vehicles/bluerovheavy/ljoint.gd<>uid://d2pk0jdvrv5gh::::res://vehicles/components/newton.tscn<>res://vehicles/bluerovheavy/rjoint.gd<>uid://7tcomo83twb::::res://vehicles/bluerovheavy/blackmetal.tres<>res://vehicles/components/Plastic black.material<>uid://dk0nt41fjw0nr::::res://scenery/underwaterEnvironment.tres<>uid://1wagv83d1du3::::res://vehicles/bluerovheavy/bluerov_cleaned_decimated_colorfixed.tscn<>uid://btr1l5hx0wqm2::::res://vehicles/components/ping360.tscn<>uid://dyoxl3tmy5jyu::::res://vehicles/bluerovheavy/lights.tres<>uid://d1ycf6y3di02h::::res://scenery/shaders/suspended_particle_shader.tres<>uid://cw4vusa7mtobl::::res://scenery/shaders/shader_textures/white-alpha-fix.png
 bluerov_cleaned_decimated_colorfixed.tscn::PackedScene::1870338115187712144::1722441850::0::1::::<><>::uid://cpltoi3887jfg::::res://vehicles/bluerovheavy/bluerov cleaned decimated.gltf
 lights.tres::StandardMaterial3D::8874113222099075224::1722441850::0::1::::<><>::
 ljoint.gd::GDScript::-1::1722441850::0::1::::<>JoltHingeJoint3D<>::
 ping1dtest.gd::GDScript::-1::1722441850::0::1::::<>RayCast3D<>::
 rjoint.gd::GDScript::-1::1722441850::0::1::::<>JoltHingeJoint3D<>::
-::res://vehicles/components/::1722569891
+::res://vehicles/components/::1722608699
 Metallic black.material::StandardMaterial3D::-1::1722440854::0::1::::<><>::
 Metallic blue.material::StandardMaterial3D::-1::1722440854::0::1::::<><>::
 Metallic gray.material::StandardMaterial3D::-1::1722440854::0::1::::<><>::
 newton.tscn::PackedScene::9085978788714647651::1722441850::0::1::::<><>::uid://dglj8xca11imm::::res://vehicles/components/newton/newton.dae
 ping360.tscn::PackedScene::3756703007773056467::1722441850::0::1::::<><>::res://vehicles/components/ping360/cameraCapture.gd<>uid://bahuknu7g0bjb::::res://vehicles/components/ping360/depth_maps.tres<>res://vehicles/components/ping360/ping360spinner.gd
-ping360render.tres::ShaderMaterial::3518026153761919317::1722569891::0::1::::<><>::
+ping360render.tres::ShaderMaterial::3518026153761919317::1722623525::0::1::::<><>::
 Plastic black.material::StandardMaterial3D::-1::1722440854::0::1::::<><>::
 ::res://vehicles/components/newton/::1722442463
 black_metal.tres::StandardMaterial3D::-1::1722441850::0::1::::<><>::

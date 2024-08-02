@@ -1,9 +1,10 @@
 res://scenery/defaultEnvironment.tres
-res://scenery/misc/tags/aruco/666.tscn
 res://scenery/shaders/caustic_pool_tile.tres
 res://scenery/underwaterEnvironment.tres
 res://vehicles/components/ping360render.tres
+res://scenery/misc/tags/aruco/222.tscn
 res://levels/pool.tscn
+res://vehicles/bluerovheavy/BlueRovHeavy.tscn
 res://menu/menu.tscn
 res://levels/baselevel.tscn
-res://vehicles/bluerovheavy/BlueRovHeavy.tscn
+res://scenery/misc/tags/aruco/666.tscn

@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=19 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
 [ext_resource type="PackedScene" uid="uid://dykuk62nuk0bf" path="res://scenery/misc/floatHeavy.tscn" id="10_ivl5n"]
 [ext_resource type="PackedScene" uid="uid://case1avmwtop7" path="res://scenery/misc/tags/aruco/999.tscn" id="12_wle4a"]
+[ext_resource type="PackedScene" uid="uid://cxnuu7ugawviv" path="res://scenery/misc/tags/aruco/222.tscn" id="13_5wq7u"]
 [ext_resource type="PackedScene" uid="uid://dg2f1dnjbktv4" path="res://scenery/misc/tags/aruco/666.tscn" id="13_oubb7"]
 [ext_resource type="PackedScene" uid="uid://dp8qy3ckiq3c" path="res://scenery/fauna/tainha200/fish_school.tscn" id="17_a33fh"]
 [ext_resource type="PackedScene" uid="uid://df5m8b4703t4q" path="res://scenery/fauna/tainha200/tainha_with_boid_logic.tscn" id="17_wb6uh"]
@@ -47,6 +48,23 @@ size = Vector3(51.3516, 9.41559, 26)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.04628, 2.08165e-12)
 operation = 2
 size = Vector3(9.43, 2.12345, 4.61)
+
+[node name="CSGCombiner3D2" type="CSGCombiner3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.68542, 3.07909, -4.76837e-07)
+use_collision = true
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="CSGCombiner3D2"]
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0.0452409, 0.0952864, -0.753687)
+radius = 0.108333
+height = 0.3
+sides = 16
+
+[node name="CSGCylinder3D2" type="CSGCylinder3D" parent="CSGCombiner3D2"]
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, -0.00892138, 0.0952864, -0.753687)
+operation = 2
+radius = 0.0808639
+height = 0.3
+sides = 16
 
 [node name="redBasketArea" parent="." instance=ExtResource("3_yqncf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.71942, 2.02227, -4.12708)
@@ -133,3 +151,6 @@ transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 
 
 [node name="666" parent="." instance=ExtResource("13_oubb7")]
 transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.708, 2.49, -1)
+
+[node name="222" parent="." instance=ExtResource("13_5wq7u")]
+transform = Transform3D(-4.37114e-09, 0, -0.1, 0, 0.1, 0, 0.1, 0, -4.37114e-09, 4.70989, 3.35025, -0.751005)

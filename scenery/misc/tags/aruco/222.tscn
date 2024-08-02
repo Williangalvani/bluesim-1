@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://cxnuu7ugawviv"]
+
+[ext_resource type="Texture2D" uid="uid://fimr3ootxv60" path="res://scenery/misc/tags/aruco/aruco_222.png" id="1_ct7q7"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_8ngva"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_egdrq"]
+albedo_texture = ExtResource("1_ct7q7")
+
+[node name="333" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_8ngva")
+surface_material_override/0 = SubResource("StandardMaterial3D_egdrq")
