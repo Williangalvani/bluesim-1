@@ -372,17 +372,14 @@ layout_mode = 2
 text = "GodRays"
 
 [node name="dirtparticlesToggle" type="CheckButton" parent="ViewportCamera/SettingsPanel/VBoxContainer"]
-visible = false
 layout_mode = 2
 text = "Particles"
 
 [node name="fancyWaterToggle" type="CheckButton" parent="ViewportCamera/SettingsPanel/VBoxContainer"]
-visible = false
 layout_mode = 2
 text = "Fancy Water"
 
 [node name="Ping360Toggle" type="CheckButton" parent="ViewportCamera/SettingsPanel/VBoxContainer"]
-visible = false
 layout_mode = 2
 text = "Ping360"
 

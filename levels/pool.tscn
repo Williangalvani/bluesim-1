@@ -1,8 +1,7 @@
-[gd_scene load_steps=17 format=3 uid="uid://kbykm0vwl5c3"]
+[gd_scene load_steps=18 format=3 uid="uid://kbykm0vwl5c3"]
 
 [ext_resource type="Material" uid="uid://cudkycx02ps38" path="res://scenery/shaders/caustic_pool_tile.tres" id="1_81v3v"]
 [ext_resource type="Script" path="res://scripts/environment.gd" id="1_yjnbp"]
-[ext_resource type="Environment" uid="uid://dk0nt41fjw0nr" path="res://scenery/underwaterEnvironment.tres" id="2_1wm7m"]
 [ext_resource type="PackedScene" uid="uid://bmu2nklfby35h" path="res://scenery/misc/red_basket_area.tscn" id="3_yqncf"]
 [ext_resource type="Script" path="res://levels/cageDoorJoint.gd" id="5_01oyj"]
 [ext_resource type="PackedScene" uid="uid://bfjb2vce6wql2" path="res://scenery/misc/float.tscn" id="5_mjvom"]
@@ -25,12 +24,15 @@ albedo = Color(0.356863, 0.639216, 0.772549, 1)
 emission = Color(0.270588, 0.380392, 0.827451, 1)
 edge_fade = 0.22974
 
+[sub_resource type="QuadMesh" id="QuadMesh_qiow8"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ayclc"]
+
 [node name="pool" type="Node3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.62013, 0.303004, 2.08165e-12)
 script = ExtResource("1_yjnbp")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = ExtResource("2_1wm7m")
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.206868, 0)
@@ -99,6 +101,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.83878, 1.8331, -3.50688)
 
 [node name="PoolFog" type="FogVolume" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.42155, -0.773578, 0)
+visible = false
 size = Vector3(25.4349, 24.5782, 28.2668)
 material = SubResource("FogMaterial_nuaoi")
 
@@ -118,7 +121,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.289883, 3.1459, -0.379578)
 transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.70842, 3.49818, -1.45495)
 
 [node name="336" parent="." instance=ExtResource("19_wx3ov")]
-transform = Transform3D(-5.73206e-15, 1.31134e-07, -1, -1, -4.37114e-08, 0, -4.37114e-08, 1, 1.31134e-07, 4.69513, 3.19167, 1.21096)
+transform = Transform3D(-4.37114e-08, 1, -1.63425e-13, -1, -4.37114e-08, 0, 2.11758e-21, 1.63425e-13, 1, -2.58447, 3.19167, -2.28092)
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="336"]
+transform = Transform3D(1.91828, 2.78353e-15, 0, -7.10543e-15, 3.06059, 0, 4.03897e-28, 0, 1, 0, 0, -0.00806665)
+mesh = SubResource("QuadMesh_qiow8")
+surface_material_override/0 = SubResource("StandardMaterial3D_ayclc")
 
 [node name="334" parent="." instance=ExtResource("12_wle4a")]
 transform = Transform3D(-1.74846e-08, 0, -0.4, 0, 0.4, 0, 0.4, 0, -1.74846e-08, 4.7, 3.49, -0.4)
