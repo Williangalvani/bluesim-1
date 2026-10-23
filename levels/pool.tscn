@@ -182,13 +182,11 @@ transform = Transform3D(-9.04896e-09, 0, -0.207016, 0, 0.207016, 0, 0.207016, 0,
 mesh = SubResource("QuadMesh_v1kub")
 surface_material_override/0 = SubResource("StandardMaterial3D_6nr23")
 
-[node name="cageDoorJoint" type="JoltSliderJoint3D" parent="."]
-limit_enabled = true
-limit_upper = 0.34
-limit_lower = -1.26
-limit_spring_enabled = true
-motor_enabled = true
-motor_max_force = 100.0
+[node name="cageDoorJoint" type="Generic6DOFJoint3D" parent="."]
+linear_limit_x/upper_distance = 0.34
+linear_limit_x/lower_distance = -1.26
+linear_motor_x/enabled = true
+linear_motor_x/force_limit = 100.0
 node_a = NodePath("../door")
 node_b = NodePath("../StaticBody3D")
 transform = Transform3D(0, 4.37114e-08, 1, 1, -4.37114e-08, 0, 4.37114e-08, 1, -4.37114e-08, -7.641e-08, 2.71518, 0.649459)

@@ -1,4 +1,4 @@
-extends JoltSliderJoint3D
+extends Generic6DOFJoint3D
 
 
 # Called when the node enters the scene tree for the first time.
@@ -12,4 +12,4 @@ func _process(delta):
 
 
 func _on_button_got_pressed():
-	self.motor_target_velocity = -0.3
+	set_param_x(PARAM_LINEAR_MOTOR_TARGET_VELOCITY, -0.3)

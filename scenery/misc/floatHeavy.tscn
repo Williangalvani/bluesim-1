@@ -29,9 +29,8 @@ radius = 0.0525692
 
 [node name="Node3D" type="Node3D"]
 
-[node name="ConeTwistJoint3D" type="JoltConeTwistJoint3D" parent="."]
-swing_limit_enabled = true
-swing_limit_span = 0.0523599
+[node name="ConeTwistJoint3D" type="ConeTwistJoint3D" parent="."]
+swing_span = 0.0523599
 node_a = NodePath("../boia")
 node_b = NodePath("../pino")
 transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, -0.00880051, 0.192896, 0.0157247)

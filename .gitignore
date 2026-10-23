@@ -1,3 +1,6 @@
 
 # Imported translations (automatically generated from CSV files)
 *.translation
+
+# Godot 4
+.godot/
