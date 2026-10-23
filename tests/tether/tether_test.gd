@@ -9,14 +9,18 @@ extends Node3D
 #
 # Options (after "--"): --scenario=NAME --out=PATH --links=N (default 200, as in baselevel)
 #   --hz=N (physics rate, default 120 like the game) --sample-every=N (physics frames)
-#   --drag-axis=z|y (z = rope/section.gd as shipped, y = drag across the capsule's long axis)
 #   --velocity-steps=N --position-steps=N (Jolt solver steps; default: project settings)
+#   --render[=side|attach] (show the simulated world on screen with a camera following the ROV,
+#     for --write-movie; links bent past their joint limit are drawn red)
+#   --seed=N (N > 0 nudges the ROV start by up to 2 mm, for repeat runs that diverge chaotically)
 #   --attach=clamp|ball (clamp = rope/joint.tscn limits at the ROV as shipped, ball = free pivot)
+#   --bend-limits=X,Y,Z (degrees; override rope/joint.tscn angular_limit_x/y/z on every tether
+#     joint. Jolt treats X as twist and Y/Z as pyramid swing in the joint frame; the joint frame
+#     is the parent section's, whose long axis is Y, so here X and Z bend the tether, Y twists it)
 
 const ROV_SCENE = preload("res://vehicles/bluerovheavy/BlueRovHeavy.tscn")
 const TETHER_SCRIPT = preload("res://levels/tether.gd")
 const SECTION_SPACING = 0.145  # levels/tether.gd section_length
-const BEND_LIMITS_DEG = Vector3(10, 10, 2)  # rope/joint.tscn angular limits (x, y, z)
 const START = Vector3(0, 1.5, 0)
 
 # obstacles: kept clear of the initial tether line (y=1.5, z=0, x<0)
@@ -29,9 +33,15 @@ var out_path = "user://tether_test.json"
 var links = 200
 var hz = 120
 var sample_every = 4
-var drag_axis = "z"
+var bend_override = Vector3.ZERO
+var limits_deg = Vector3.ZERO  # actual tether joint angular limits (x, y, z), read at spawn
 var velocity_steps = 0
 var attach = "clamp"
+var seed = 0
+var render = false
+var cam_mode = "side"
+var red_mat: StandardMaterial3D
+var follow_cam: Camera3D
 var position_steps = 0
 
 var rov: RigidBody3D
@@ -73,9 +83,16 @@ func _ready():
 			"links": links = int(kv[1])
 			"hz": hz = int(kv[1])
 			"sample-every": sample_every = int(kv[1])
-			"drag-axis": drag_axis = kv[1]
+			"bend-limits":
+				var b = kv[1].split_floats(",")
+				bend_override = Vector3(b[0], b[1], b[2])
 			"velocity-steps": velocity_steps = int(kv[1])
 			"attach": attach = kv[1]
+			"seed": seed = int(kv[1])
+			"render":
+				render = true
+				if kv.size() > 1:
+					cam_mode = kv[1]
 			"position-steps": position_steps = int(kv[1])
 	Engine.physics_ticks_per_second = hz
 	if velocity_steps or position_steps:
@@ -88,7 +105,17 @@ func _ready():
 		await ProjectSettings.settings_changed
 		var vp = SubViewport.new()
 		vp.own_world_3d = true
-		add_child(vp)
+		if render:
+			# put the private world on screen
+			var layer = CanvasLayer.new()
+			var box = SubViewportContainer.new()
+			box.stretch = true
+			box.set_anchors_preset(Control.PRESET_FULL_RECT)
+			add_child(layer)
+			layer.add_child(box)
+			box.add_child(vp)
+		else:
+			add_child(vp)
 		world_root = Node3D.new()
 		vp.add_child(world_root)
 	velocity_steps = ProjectSettings.get_setting("physics/jolt_physics_3d/simulation/velocity_steps")
@@ -96,10 +123,10 @@ func _ready():
 	_build_world()
 	_spawn_rov_and_tether()
 	_build_plan()
-	for k in ["link_err", "pen_static", "pen_rov", "self_clip", "bend_x", "bend_z", "twist", "length_stretch"]:
+	for k in ["link_err", "pen_static", "pen_rov", "self_clip", "rot_x", "rot_y", "rot_z", "bend_over", "visible_bend", "length_stretch"]:
 		worst[k] = {"value": 0.0, "t": 0.0, "link": -1}
 	ready_to_run = true
-	print("TETHER_TEST start scenario=%s links=%d hz=%d drag_axis=%s steps=%d/%d attach=%s" % [scenario, links, hz, drag_axis, velocity_steps, position_steps, attach])
+	print("TETHER_TEST start scenario=%s links=%d hz=%d steps=%d/%d attach=%s limits=%s" % [scenario, links, hz, velocity_steps, position_steps, attach, limits_deg])
 
 
 # ---------------------------------------------------------------- world
@@ -157,6 +184,21 @@ func _build_world():
 	world_root.add_child(cam)
 	cam.global_position = Vector3(-6, 9, 12)
 	cam.look_at(Vector3(0, 0.5, 0))
+	if render:
+		red_mat = _mat(Color(1, 0.1, 0.1))
+		red_mat.emission_enabled = true
+		red_mat.emission = Color(1, 0, 0)
+		follow_cam = Camera3D.new()
+		follow_cam.fov = 60
+		world_root.add_child(follow_cam)
+		follow_cam.make_current()
+		var env = WorldEnvironment.new()
+		env.environment = Environment.new()
+		env.environment.background_mode = Environment.BG_COLOR
+		env.environment.background_color = Color(0.12, 0.3, 0.45)
+		env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		env.environment.ambient_light_color = Color(0.6, 0.7, 0.8)
+		world_root.add_child(env)
 
 
 func _spawn_rov_and_tether():
@@ -169,7 +211,12 @@ func _spawn_rov_and_tether():
 	tether.position = Vector3(-0.53995, 0, 0)  # same offset as levels/baselevel.tscn
 	vehicle.add_child(tether)
 	world_root.add_child(vehicle)
-	vehicle.global_position = START
+	var start = START
+	if seed > 0:
+		var rng = RandomNumberGenerator.new()
+		rng.seed = seed
+		start += Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * 0.002
+	vehicle.global_position = start
 	rov = vehicle.get_node("BlueRov")
 	for n in vehicle.find_children("*", "RigidBody3D", true, false):
 		if n.get_parent() != tether:
@@ -178,10 +225,6 @@ func _spawn_rov_and_tether():
 		if c is RigidBody3D:
 			sections.append(c)
 			tether_rids.append(c.get_rid())
-	if drag_axis == "y":
-		var fixed = load("res://tests/tether/section_drag_y.gd")
-		for s in sections:
-			s.set_script(fixed)
 	# joints: first one hangs off the ROV, the rest off each section (see tether.gd addLink)
 	for j in [rov.get_node("joint")] + sections.map(func(s): return s.get_node_or_null("joint")):
 		if j == null:
@@ -195,6 +238,15 @@ func _spawn_rov_and_tether():
 			"lb": b.global_transform.affine_inverse() * anchor,
 			"rel0": (a.global_transform.basis.inverse() * b.global_transform.basis).orthonormalized(),
 		})
+	if bend_override != Vector3.ZERO:
+		for j in joints:
+			for ax in 3:
+				var r = deg_to_rad(bend_override[ax])
+				j.joint.set("angular_limit_%s/upper_angle" % "xyz"[ax], r)
+				j.joint.set("angular_limit_%s/lower_angle" % "xyz"[ax], -r)
+	var j1 = joints[1].joint
+	for ax in 3:
+		limits_deg[ax] = rad_to_deg(j1.get("angular_limit_%s/upper_angle" % "xyz"[ax]))
 	if attach == "ball":
 		for ax in ["x", "y", "z"]:
 			joints[0].joint.set("angular_limit_%s/enabled" % ax, false)
@@ -240,9 +292,19 @@ func _build_plan():
 			plan = [["hold", 0.1]]
 
 
+# acceleration limits for the reference trajectory: ArduPilot's WPNAV_ACC / WPNAV_ACC_Z defaults
+const ACCEL_H = 2.5
+const ACCEL_V = 1.0
+
+
+func _limit_accel(want, delta):
+	var dv = want - ref_vel
+	var h = Vector3(dv.x, 0, dv.z).limit_length(ACCEL_H * delta)
+	return ref_vel + Vector3(h.x, clamp(dv.y, -ACCEL_V * delta, ACCEL_V * delta), h.z)
+
+
 func _advance_plan(delta):
 	open_force = Vector3.ZERO
-	ref_vel = Vector3.ZERO
 	if step_i >= plan.size():
 		done = true
 		return
@@ -251,24 +313,32 @@ func _advance_plan(delta):
 	var finished = false
 	match s[0]:
 		"hold":
+			ref_vel = _limit_accel(Vector3.ZERO, delta)
+			ref_pos += ref_vel * delta
 			finished = step_t >= s[1]
 		"go":
 			var to = s[1] - ref_pos
-			var d = s[2] * delta
-			if to.length() <= d:
+			var dist = to.length()
+			# slow down in time to stop at the waypoint without exceeding the decel limit
+			var dir = to / max(dist, 1e-6)
+			var a = lerp(ACCEL_H, ACCEL_V, abs(dir.y))
+			var want = dir * min(s[2], sqrt(2.0 * a * dist))
+			ref_vel = _limit_accel(want, delta)
+			ref_pos += ref_vel * delta
+			if dist < 0.01 and ref_vel.length() < 0.05:
 				ref_pos = s[1]
+				ref_vel = Vector3.ZERO
 				finished = true
-			else:
-				ref_vel = to.normalized() * s[2]
-				ref_pos += ref_vel * delta
 		"yaw":
 			var total = deg_to_rad(s[1])
 			var rate = deg_to_rad(s[2])
 			ref_yaw = rate * min(step_t, total / rate)
 			finished = step_t >= total / rate
 		"force":
+			# deliberately abusive: open-loop full thrust, no acceleration limit
 			open_force = s[2]
-			ref_pos = rov.global_position  # follow wherever it ends up
+			ref_pos = rov.global_position
+			ref_vel = rov.linear_velocity
 			finished = step_t >= s[1]
 	if finished:
 		step_i += 1
@@ -312,6 +382,17 @@ func _physics_process(delta):
 	frames += 1
 	_advance_plan(delta)
 	_drive(delta)
+	if follow_cam:
+		# side-on view of the ROV and the first couple of metres of tether
+		var p = rov.global_position
+		if cam_mode == "attach":
+			# close, from above and behind, on the ROV end of the tether
+			var a = joints[0].a.global_transform * joints[0].la
+			follow_cam.global_position = a + Vector3(-0.3, 0.45, 0.4)
+			follow_cam.look_at(a + Vector3(-0.2, 0, 0))
+		else:
+			follow_cam.global_position = p + Vector3(-0.9, 0.5, 2.2)
+			follow_cam.look_at(p + Vector3(-0.9, -0.1, 0))
 	if frames % sample_every == 0:
 		_sample()
 	if done or exploded:
@@ -344,6 +425,8 @@ func _sample():
 	var length = 0.0
 	var bend = Vector3.ZERO
 	var bend_viol = 0
+	var vis_max = 0.0
+	var over_max = 0.0
 	for i in joints.size():
 		var j = joints[i]
 		var pa = j.a.global_transform * j.la
@@ -352,20 +435,31 @@ func _sample():
 		errs.append(e)
 		_track("link_err", e, i)
 		if i > 0:  # ROV->first section link has a different reference frame
-			# rotation of B relative to A since creation, in A's (= the joint's) frame,
-			# split into twist about the long axis (local Y) and swing about X / Z
+			# rotation of B relative to A since creation, in the joint frame, decomposed the
+			# way Jolt's 6DOF constraint limits it: twist about X, pyramid swing about Y and Z
 			var q = ((j.a.global_transform.basis.inverse() * j.b.global_transform.basis).orthonormalized() * j.rel0.inverse()).get_rotation_quaternion()
 			if q.w < 0:
 				q = -q
-			var twist = abs(rad_to_deg(2.0 * atan2(q.y, q.w)))
-			var qt = Quaternion(0, q.y, 0, q.w).normalized()
+			var qt = Quaternion(q.x, 0, 0, q.w).normalized()
 			var sw = q * qt.inverse()
-			var sv = Vector3(sw.x, sw.y, sw.z) * (2.0 * acos(clamp(sw.w, -1.0, 1.0)) / max(sqrt(1.0 - sw.w * sw.w), 1e-6))
-			var d = Vector3(abs(rad_to_deg(sv.x)), twist, abs(rad_to_deg(sv.z)))
+			var d = Vector3(abs(rad_to_deg(2.0 * atan2(qt.x, qt.w))),
+					abs(rad_to_deg(2.0 * atan2(sw.y, sw.w))),
+					abs(rad_to_deg(2.0 * atan2(sw.z, sw.w))))
 			bend = Vector3(max(bend.x, d.x), max(bend.y, d.y), max(bend.z, d.z))
-			_track("bend_x", d.x, i); _track("twist", d.y, i); _track("bend_z", d.z, i)
-			if d.x > BEND_LIMITS_DEG.x + 2 or d.y > BEND_LIMITS_DEG.y + 2 or d.z > BEND_LIMITS_DEG.z + 2:
+			_track("rot_x", d.x, i); _track("rot_y", d.y, i); _track("rot_z", d.z, i)
+			# what you can actually see: the angle between the two links' long axes
+			var vis = rad_to_deg(j.a.global_transform.basis.y.angle_to(j.b.global_transform.basis.y))
+			_track("visible_bend", vis, i)
+			vis_max = max(vis_max, vis)
+			var over = (d - limits_deg).max_axis_index()
+			var over_deg = (d - limits_deg)[over]
+			_track("bend_over", over_deg, i)
+			over_max = max(over_max, over_deg)
+			if over_deg > 2.0:
 				bend_viol += 1
+			if render:
+				var mi = j.b.get_node("MeshInstance3D")
+				mi.material_override = red_mat if over_deg > 2.0 else null
 	# the sections themselves are rigid, so all elongation is in the joint gaps
 	length = sections.size() * SECTION_SPACING + errs.reduce(func(x, y): return x + y, 0.0)
 	var stretch = length / (sections.size() * SECTION_SPACING) - 1.0
@@ -376,8 +470,10 @@ func _sample():
 	s["link_err_p99"] = snapped(errs[int(errs.size() * 0.99)], 0.0001)
 	s["link_err_mean"] = snapped(errs.reduce(func(a, b): return a + b, 0.0) / errs.size(), 0.0001)
 	s["length_stretch"] = snapped(stretch, 0.0001)
-	s["bend_max"] = _v(bend)  # [about X, twist about Y, about Z] in degrees
+	s["rot_max"] = _v(bend)  # degrees: twist about joint X, swing about Y, swing about Z
 	s["bend_violations"] = bend_viol
+	s["visible_bend_max"] = snapped(vis_max, 0.01)
+	s["bend_over_max"] = snapped(over_max, 0.01)
 
 	# clipping
 	var pen_static = 0.0
@@ -417,9 +513,15 @@ func _sample():
 			exploded = true
 		# links passing straight through solid geometry
 		if i + 1 < sections.size():
-			var ray = PhysicsRayQueryParameters3D.create(sec.global_position, sections[i + 1].global_position)
-			ray.exclude = _query_exclude(true, false)
-			var hit = space.intersect_ray(ray)
+			var jn = joints[i + 1]
+			var anchor = ((jn.a.global_transform * jn.la) + (jn.b.global_transform * jn.lb)) / 2.0
+			var hit = {}
+			for seg in [[sec.global_position, anchor], [anchor, sections[i + 1].global_position]]:
+				var ray = PhysicsRayQueryParameters3D.create(seg[0], seg[1])
+				ray.exclude = _query_exclude(true, false)
+				hit = space.intersect_ray(ray)
+				if hit:
+					break
 			if hit:
 				through_count += 1
 				if through_events.size() < 25:
@@ -447,8 +549,8 @@ func _v(v):
 func _finish():
 	set_physics_process(false)
 	var result = {
-		"scenario": scenario, "links": links, "hz": hz, "drag_axis": drag_axis,
-		"velocity_steps": velocity_steps, "position_steps": position_steps, "attach": attach,
+		"scenario": scenario, "links": links, "hz": hz, "limits_deg": _v(limits_deg),
+		"velocity_steps": velocity_steps, "position_steps": position_steps, "attach": attach, "seed": seed,
 		"engine": Engine.get_version_info().string,
 		"physics_engine": ProjectSettings.get_setting("physics/3d/physics_engine"),
 		"duration": snapped(t, 0.01), "completed": done, "exploded": exploded,
