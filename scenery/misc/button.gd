@@ -17,7 +17,7 @@ func _process(delta):
 func _on_area_3d_body_entered(body):
 	if body == $buttonitself and ever_depressed:
 		pressed = true
-		$JoltSliderJoint3D.motor_target_velocity = -0.1
+		$SliderJoint.set_param_x(Generic6DOFJoint3D.PARAM_LINEAR_MOTOR_TARGET_VELOCITY, -0.1)
 		var updated_material = $buttonitself/bodymesh.get_surface_override_material(0)
 		updated_material.emission_energy = 0.5
 		$buttonitself/bodymesh.set_surface_override_material(0, updated_material)
