@@ -4,3 +4,4 @@
 
 # Godot 4
 .godot/
+__pycache__/
