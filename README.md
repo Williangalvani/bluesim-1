@@ -43,7 +43,7 @@ If there is not SITL instance attached, these keys can be used to control the RO
 
     Before opening Bluesim (it launches its own SITL instance), run:
 
- `sim_vehicle.py -j6 -L RATBeach --frame JSON --out=udpout:0.0.0.0:14550`
+ `sim_vehicle.py -j6 -L RATBeach -v ArduSub -f vectored_6dof --model JSON --out=udpout:0.0.0.0:14550`
 
 # External Levels
 
@@ -55,4 +55,4 @@ The root node at "custom_level.tscn" should preferably be a spatial node with al
 ## Sunken Ship Level
 
 ![image](https://user-images.githubusercontent.com/4013804/104868028-09e92800-5921-11eb-9b51-67f947707725.png)
-A sample level with a sunken ship can be downloaded [here](https://sim.galvanicloop.com/levels/ship.pck).
+A sample level with a sunken ship can be downloaded [here](https://drive.google.com/file/d/1WH4l-l8qXnWUa5BHHtIDgaU-UnMEJ2H_/view?usp=share_link).
