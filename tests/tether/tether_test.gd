@@ -10,8 +10,9 @@ extends Node3D
 # Options (after "--"): --scenario=NAME --out=PATH --links=N (default 200, as in baselevel)
 #   --hz=N (physics rate, default 120 like the game) --sample-every=N (physics frames)
 #   --velocity-steps=N --position-steps=N (Jolt solver steps; default: project settings)
-#   --render[=side|attach] (show the simulated world on screen with a camera following the ROV,
-#     for --write-movie; links bent past their joint limit are drawn red)
+#   --render[=wide|side|attach] (show the simulated world on screen with a camera following the
+#     ROV, for --write-movie, with live metrics; links bent past their joint limit are drawn red,
+#     links sinking > 5 mm into geometry or the ROV magenta)
 #   --seed=N (N > 0 nudges the ROV start by up to 2 mm, for repeat runs that diverge chaotically)
 #   --attach=clamp|ball (clamp = rope/joint.tscn limits at the ROV as shipped, ball = free pivot)
 #   --bend-limits=X,Y,Z (degrees; override rope/joint.tscn angular_limit_x/y/z on every tether
@@ -39,8 +40,11 @@ var velocity_steps = 0
 var attach = "clamp"
 var seed = 0
 var render = false
-var cam_mode = "side"
+var cam_mode = "wide"
 var red_mat: StandardMaterial3D
+var pen_mat: StandardMaterial3D
+var hud: Label
+var tick: ColorRect  # changes colour every physics frame, so frozen recordings are detectable
 var follow_cam: Camera3D
 var position_steps = 0
 
@@ -188,6 +192,23 @@ func _build_world():
 		red_mat = _mat(Color(1, 0.1, 0.1))
 		red_mat.emission_enabled = true
 		red_mat.emission = Color(1, 0, 0)
+		pen_mat = _mat(Color(1, 0, 1))
+		pen_mat.emission_enabled = true
+		pen_mat.emission = Color(1, 0, 1)
+		var layer = CanvasLayer.new()
+		hud = Label.new()
+		hud.position = Vector2(16, 12)
+		hud.add_theme_font_size_override("font_size", 22)
+		hud.add_theme_color_override("font_color", Color.WHITE)
+		hud.add_theme_color_override("font_outline_color", Color.BLACK)
+		hud.add_theme_constant_override("outline_size", 6)
+		layer.add_child(hud)
+		tick = ColorRect.new()
+		tick.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		tick.size = Vector2(32, 32)
+		tick.position = Vector2(-32, 0)
+		layer.add_child(tick)
+		add_child(layer)
 		follow_cam = Camera3D.new()
 		follow_cam.fov = 60
 		world_root.add_child(follow_cam)
@@ -378,10 +399,13 @@ func _physics_process(delta):
 		return
 	if frames == 0:
 		_rov_basis0 = rov.global_transform.basis
+		print("TETHER_TEST first_frame=%d" % Engine.get_frames_drawn())
 	t += delta
 	frames += 1
 	_advance_plan(delta)
 	_drive(delta)
+	if tick:
+		tick.color = Color.from_hsv(fmod(frames * 0.37, 1.0), 1.0, 1.0)
 	if follow_cam:
 		# side-on view of the ROV and the first couple of metres of tether
 		var p = rov.global_position
@@ -390,9 +414,15 @@ func _physics_process(delta):
 			var a = joints[0].a.global_transform * joints[0].la
 			follow_cam.global_position = a + Vector3(-0.3, 0.45, 0.4)
 			follow_cam.look_at(a + Vector3(-0.2, 0, 0))
-		else:
+		elif cam_mode == "side":
 			follow_cam.global_position = p + Vector3(-0.9, 0.5, 2.2)
 			follow_cam.look_at(p + Vector3(-0.9, -0.1, 0))
+		else:
+			# wide chase view: the ROV, a few metres of tether and nearby obstacles
+			var target = p + Vector3(-1.0, -0.4, 0)
+			var want = target + Vector3(-2.1, 1.9, 2.8)
+			follow_cam.global_position = want if frames < 2 else follow_cam.global_position.lerp(want, 0.05)
+			follow_cam.look_at(target)
 	if frames % sample_every == 0:
 		_sample()
 	if done or exploded:
@@ -490,6 +520,7 @@ func _sample():
 		params.transform = cs.global_transform
 		params.exclude = _query_exclude(true, false)
 		var d = _max_depth(space, params)
+		var clipped = d > 0.005
 		pen_static = max(pen_static, d)
 		if d > 0.005:
 			n_pen += 1
@@ -497,8 +528,11 @@ func _sample():
 		if i > 1:  # the first sections sit against the ROV by design
 			params.exclude = _query_exclude(false, true)
 			d = _max_depth(space, params)
+			clipped = clipped or d > 0.005
 			pen_rov = max(pen_rov, d)
 			_track("pen_rov", d, i)
+		if render and clipped:
+			sec.get_node("MeshInstance3D").material_override = pen_mat
 		# self: other sections except direct neighbours (their capsules overlap by design)
 		var ex = static_rids + rov_rids + [sec.get_rid()]
 		for k in [i - 2, i - 1, i + 1, i + 2]:
@@ -535,6 +569,12 @@ func _sample():
 	s["below_floor"] = sections.filter(func(x): return x.global_position.y < -0.02).size()
 	s["phys_ms"] = snapped(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, 0.01)
 	series.append(s)
+	if hud:
+		var step = plan[min(step_i, plan.size() - 1)]
+		hud.text = ("%s   t = %.1f s   step: %s\n" % [scenario, t, step[0]]
+			+ "worst joint gap %.1f mm   stretch %.2f %%\n" % [s.link_err_max * 1000.0, stretch * 100.0]
+			+ "into geometry %.1f mm   into ROV %.1f mm   self %.1f mm\n" % [pen_static * 1000.0, pen_rov * 1000.0, self_clip * 1000.0]
+			+ "past joint limit %.1f deg   (red = past limit, magenta = > 5 mm into something)" % s.bend_over_max)
 
 
 func _track(key, value, link):
