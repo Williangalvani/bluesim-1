@@ -52,7 +52,11 @@ func get_servos():
 		return
 	for i in range(0, 17):
 		buffer.seek(8 + i * 2)
-		actuate_servo(i, (float(buffer.get_u16()) - 1000) / 1000)
+		var pwm = buffer.get_u16()
+		# ArduPilot sends 0 for outputs that are not initialised yet (e.g. while booting)
+		if pwm == 0:
+			continue
+		actuate_servo(i, (float(pwm) - 1000) / 1000)
 
 
 func send_fdm():
