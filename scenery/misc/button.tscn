@@ -47,12 +47,11 @@ surface_material_override/0 = SubResource("StandardMaterial3D_thkyr")
 transform = Transform3D(0.999897, -0.00404066, -0.0137913, -0.0138195, -0.0070551, -0.99988, 0.00394289, 0.999967, -0.0071102, 0.00076385, 0.00133359, -0.189035)
 shape = SubResource("CylinderShape3D_1iigu")
 
-[node name="JoltSliderJoint3D" type="JoltSliderJoint3D" parent="."]
-limit_enabled = true
-limit_upper = 0.1
-motor_enabled = true
-motor_target_velocity = 0.1
-motor_max_force = 0.5
+[node name="SliderJoint" type="Generic6DOFJoint3D" parent="."]
+linear_limit_x/upper_distance = 0.1
+linear_motor_x/enabled = true
+linear_motor_x/target_velocity = 0.1
+linear_motor_x/force_limit = 0.5
 node_a = NodePath("../body")
 node_b = NodePath("../buttonitself")
 transform = Transform3D(1.31134e-07, 0, -1, 0, 1, 0, 1, 0, 1.31134e-07, 0.0135698, -0.0442824, -0.0460613)
