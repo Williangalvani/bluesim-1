@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://bg0dka5teeyi4"]
 
 [node name="joint" type="Generic6DOFJoint3D"]
-angular_limit_x/upper_angle = 0.174533
-angular_limit_x/lower_angle = -0.174533
-angular_limit_y/upper_angle = 0.174533
-angular_limit_y/lower_angle = -0.174533
-angular_limit_z/upper_angle = 0.0349066
-angular_limit_z/lower_angle = -0.0349066
+angular_limit_x/upper_angle = 1.047198
+angular_limit_x/lower_angle = -1.047198
+angular_limit_y/upper_angle = 0.785398
+angular_limit_y/lower_angle = -0.785398
+angular_limit_z/upper_angle = 1.047198
+angular_limit_z/lower_angle = -1.047198
