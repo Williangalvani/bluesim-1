@@ -44,7 +44,9 @@ func calculate_buoyancy_and_ballast():
 			var buoyancy = vehicle.buoyancy
 			if vehicle.global_transform.origin.y > surface_altitude:
 				buoyancy = 0
-			vehicle.apply_force(Vector3(0, buoyancy, 0),vehicle.transform.basis.y * +0.3)
+			# center of buoyancy a few cm above the center of mass, like the real vehicle; higher and the
+			# righting moment outweighs the thrusters, so a 6DOF frame cannot roll or pitch past ~30 degrees
+			vehicle.apply_force(Vector3(0, buoyancy, 0),vehicle.transform.basis.y * +0.05)
 		var ballasts = vehicle.find_child("ballasts")
 		if ballasts:
 			var children = ballasts.get_children()
