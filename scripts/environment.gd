@@ -42,7 +42,13 @@ func calculate_buoyancy_and_ballast():
 				vehicle.add_force_local_pos(Vector3(0, buoyancy, 0), buoy.transform.origin)
 		else:
 			var buoyancy = vehicle.buoyancy
-			if vehicle.global_transform.origin.y > surface_altitude:
+			var hull_height = vehicle.get("hull_height")
+			if hull_height:
+				# scale with how much of the hull is under water, so the vehicle floats awash instead of
+				# switching all of its buoyancy at once as its origin crosses the surface
+				var hull_bottom = vehicle.global_transform.origin.y - hull_height / 2
+				buoyancy *= clamp((surface_altitude - hull_bottom) / hull_height, 0, 1)
+			elif vehicle.global_transform.origin.y > surface_altitude:
 				buoyancy = 0
 			# center of buoyancy a few cm above the center of mass, like the real vehicle; higher and the
 			# righting moment outweighs the thrusters, so a 6DOF frame cannot roll or pitch past ~30 degrees
