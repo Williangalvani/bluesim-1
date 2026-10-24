@@ -18,6 +18,8 @@ extends Node3D
 #   --bend-limits=X,Y,Z (degrees; override rope/joint.tscn angular_limit_x/y/z on every tether
 #     joint. Jolt treats X as twist and Y/Z as pyramid swing in the joint frame; the joint frame
 #     is the parent section's, whose long axis is Y, so here X and Z bend the tether, Y twists it)
+#   --bend-stiffness=K[,D] (override rope/joint.tscn angular springs on every tether joint:
+#     stiffness K in N*m/rad and damping D in N*m*s/rad on all three axes; K=0 disables them)
 
 const ROV_SCENE = preload("res://vehicles/bluerovheavy/BlueRovHeavy.tscn")
 const TETHER_SCRIPT = preload("res://levels/tether.gd")
@@ -36,6 +38,8 @@ var hz = 120
 var sample_every = 4
 var bend_override = Vector3.ZERO
 var limits_deg = Vector3.ZERO  # actual tether joint angular limits (x, y, z), read at spawn
+var spring_override = []  # [stiffness, damping] from --bend-stiffness
+var spring = [0.0, 0.0]  # actual tether joint angular spring stiffness / damping, read at spawn
 var velocity_steps = 0
 var attach = "clamp"
 var seed = 0
@@ -90,6 +94,10 @@ func _ready():
 			"bend-limits":
 				var b = kv[1].split_floats(",")
 				bend_override = Vector3(b[0], b[1], b[2])
+			"bend-stiffness":
+				spring_override = Array(kv[1].split_floats(","))
+				if spring_override.size() < 2:
+					spring_override.append(0.0)
 			"velocity-steps": velocity_steps = int(kv[1])
 			"attach": attach = kv[1]
 			"seed": seed = int(kv[1])
@@ -127,10 +135,10 @@ func _ready():
 	_build_world()
 	_spawn_rov_and_tether()
 	_build_plan()
-	for k in ["link_err", "pen_static", "pen_rov", "self_clip", "rot_x", "rot_y", "rot_z", "bend_over", "visible_bend", "length_stretch"]:
+	for k in ["link_err", "pen_static", "pen_rov", "self_clip", "rot_x", "rot_y", "rot_z", "bend_over", "visible_bend", "length_stretch", "zigzag"]:
 		worst[k] = {"value": 0.0, "t": 0.0, "link": -1}
 	ready_to_run = true
-	print("TETHER_TEST start scenario=%s links=%d hz=%d steps=%d/%d attach=%s limits=%s" % [scenario, links, hz, velocity_steps, position_steps, attach, limits_deg])
+	print("TETHER_TEST start scenario=%s links=%d hz=%d steps=%d/%d attach=%s limits=%s spring=%s" % [scenario, links, hz, velocity_steps, position_steps, attach, limits_deg, spring])
 
 
 # ---------------------------------------------------------------- world
@@ -265,7 +273,15 @@ func _spawn_rov_and_tether():
 				var r = deg_to_rad(bend_override[ax])
 				j.joint.set("angular_limit_%s/upper_angle" % "xyz"[ax], r)
 				j.joint.set("angular_limit_%s/lower_angle" % "xyz"[ax], -r)
+	if spring_override:
+		for j in joints:
+			for ax in "xyz":
+				j.joint.set("angular_spring_%s/enabled" % ax, spring_override[0] > 0.0)
+				j.joint.set("angular_spring_%s/stiffness" % ax, spring_override[0])
+				j.joint.set("angular_spring_%s/damping" % ax, spring_override[1])
 	var j1 = joints[1].joint
+	if j1.get("angular_spring_x/enabled"):
+		spring = [j1.get("angular_spring_x/stiffness"), j1.get("angular_spring_x/damping")]
 	for ax in 3:
 		limits_deg[ax] = rad_to_deg(j1.get("angular_limit_%s/upper_angle" % "xyz"[ax]))
 	if attach == "ball":
@@ -504,6 +520,21 @@ func _sample():
 	s["bend_violations"] = bend_viol
 	s["visible_bend_max"] = snapped(vis_max, 0.01)
 	s["bend_over_max"] = snapped(over_max, 0.01)
+	# sawtooth: neighbouring joints bending in opposite directions. For three consecutive links,
+	# a smooth arc turns by the sum of both joint bends from first to last link, a zigzag turns
+	# by ~0, so half the shortfall is the zigzag amplitude in degrees (0 for any smooth curve)
+	var zz_max = 0.0
+	var zz_sum = 0.0
+	for k in range(1, sections.size() - 1):
+		var a0 = sections[k - 1].global_transform.basis.y
+		var a1 = sections[k].global_transform.basis.y
+		var a2 = sections[k + 1].global_transform.basis.y
+		var zz = rad_to_deg(a0.angle_to(a1) + a1.angle_to(a2) - a0.angle_to(a2)) / 2.0
+		_track("zigzag", zz, k)
+		zz_max = max(zz_max, zz)
+		zz_sum += zz
+	s["zigzag_max"] = snapped(zz_max, 0.01)
+	s["zigzag_mean"] = snapped(zz_sum / max(1, sections.size() - 2), 0.001)
 
 	# clipping
 	var pen_static = 0.0
@@ -574,7 +605,8 @@ func _sample():
 		hud.text = ("%s   t = %.1f s   step: %s\n" % [scenario, t, step[0]]
 			+ "worst joint gap %.1f mm   stretch %.2f %%\n" % [s.link_err_max * 1000.0, stretch * 100.0]
 			+ "into geometry %.1f mm   into ROV %.1f mm   self %.1f mm\n" % [pen_static * 1000.0, pen_rov * 1000.0, self_clip * 1000.0]
-			+ "past joint limit %.1f deg   (red = past limit, magenta = > 5 mm into something)" % s.bend_over_max)
+			+ "past joint limit %.1f deg   zigzag %.1f deg\n" % [s.bend_over_max, s.zigzag_max]
+			+ "(red = past limit, magenta = > 5 mm into something)")
 
 
 func _track(key, value, link):
@@ -589,7 +621,7 @@ func _v(v):
 func _finish():
 	set_physics_process(false)
 	var result = {
-		"scenario": scenario, "links": links, "hz": hz, "limits_deg": _v(limits_deg),
+		"scenario": scenario, "links": links, "hz": hz, "limits_deg": _v(limits_deg), "spring": spring,
 		"velocity_steps": velocity_steps, "position_steps": position_steps, "attach": attach, "seed": seed,
 		"engine": Engine.get_version_info().string,
 		"physics_engine": ProjectSettings.get_setting("physics/3d/physics_engine"),
