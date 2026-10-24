@@ -20,6 +20,7 @@ config/icon="res://icon.png"
 
 Globals="*res://Globals.tscn"
 SceneLoader="*res://scripts/scene_loader.gd"
+ControllerIcons="*res://addons/controller_icons/ControllerIcons.gd"
 
 [debug]
 
