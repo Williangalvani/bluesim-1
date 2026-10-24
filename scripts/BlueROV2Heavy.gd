@@ -231,7 +231,7 @@ func add_force_local(force: Vector3, pos: Vector3):
 	self.apply_force(force_local, pos_local)
 
 func add_force_local_if_underwater(force: Vector3, pos: Vector3):
-	if (self.transform.basis * pos).z > 3.5:
+	if (self.global_position + self.global_basis * pos).y > Globals.surface_altitude:
 		return
 	var pos_local = self.transform.basis * pos
 	var force_local = self.transform.basis * force
