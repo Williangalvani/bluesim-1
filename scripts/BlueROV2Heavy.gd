@@ -231,7 +231,8 @@ func actuate_servo(id, percentage):
 	if percentage == 0:
 		return
 
-	var force = (percentage - 0.5) * 2 * -THRUST
+	# ArduSub drives the thrusters over 1100-1900 us, so full thrust is 0.4 away from neutral, not 0.5
+	var force = clamp((percentage - 0.5) / 0.4, -1, 1) * -THRUST
 	match id:
 		0:
 			self.add_force_local_if_underwater($t1.transform.basis*Vector3(force,0,0), $t1.position)
