@@ -4,6 +4,8 @@ var image : Image
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	if Globals.isHTML5:
+		return
 	#$"../../UdpH264Streamer".setup_gstreamer_pipeline()
 	RenderingServer.frame_post_draw.connect(push)
 	$"../../UdpH264Streamer".input_height = self.size.y

@@ -11,6 +11,10 @@ func _ready():
 	Engine.physics_ticks_per_second = Globals.physics_rate
 	$VBoxContainer/physicsRate.text = 'Physics: ' + str(Globals.physics_rate) + ' Hz'
 	$VBoxContainer/physicsRateSlider.value = Globals.physics_rate
+	if Globals.isHTML5:
+		# shown inside Cockpit like a camera feed, so start without overlays
+		$VBoxContainer/StreamingToggle.queue_free()
+		hide()
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
