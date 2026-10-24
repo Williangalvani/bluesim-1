@@ -13,3 +13,4 @@ data_*/
 # Godot 4
 .godot/
 __pycache__/
+export/

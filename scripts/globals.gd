@@ -23,4 +23,7 @@ var sitl_pid = 0
 
 
 func _ready():
-	isHTML5 = OS.get_name() == "HTML5"
+	isHTML5 = OS.has_feature("web")
+	if isHTML5:
+		# the GStreamer streamer is a native extension, not available in browsers
+		streaming = false
