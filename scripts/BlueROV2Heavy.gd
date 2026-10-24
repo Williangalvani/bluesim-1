@@ -119,7 +119,8 @@ func send_fdm():
 	var _velocity = toNED * self.linear_velocity
 	var velo = [_velocity.x, _velocity.y, _velocity.z]
 
-	var _position = toNED * self.transform.origin
+	# the vehicle scene is placed above the water, so its local origin is not where depth starts
+	var _position = toNED * (self.global_position - Vector3(0, Globals.surface_altitude, 0))
 	var pos = [_position.x, _position.y, _position.z]
 
 	var IMU_fmt = {"gyro": gyro, "accel_body": accel}
