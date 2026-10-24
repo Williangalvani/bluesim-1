@@ -1,6 +1,13 @@
 extends RigidBody3D
 
 const THRUST = 50
+# quadratic drag along the lateral, vertical and forward body axes, in N/(m/s)^2: a drag coefficient
+# of ~0.85 over the frame's side, top and front areas, which tops out at the 1.5 m/s forward speed
+# Blue Robotics quotes for the BlueROV2
+const DRAG = Vector3(50, 113, 63)
+# quadratic rotational drag around the body axes, in N*m/(rad/s)^2: together with the body's angular_damp,
+# a full-thrust yaw rate of ~160 deg/s, just above the ~150 deg/s ArduSub asks for at full stick
+const ANGULAR_DRAG = Vector3(5, 5, 5)
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
@@ -208,6 +215,7 @@ func _physics_process(delta):
 	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
 	calculated_acceleration -= get_gravity() * gravity_scale
 	last_velocity = self.linear_velocity
+	apply_water_drag()
 	get_servos()
 	if peer:
 		send_fdm()
@@ -227,6 +235,20 @@ func add_force_local_if_underwater(force: Vector3, pos: Vector3):
 	self.apply_force(force_local, pos_local)
 
 
+func apply_thrust(thruster: Node3D, force: float):
+	# the thruster nodes are scaled to fit their meshes, which must not scale the force too
+	self.add_force_local_if_underwater(thruster.transform.basis.x.normalized() * force, thruster.position)
+
+
+func apply_water_drag():
+	var body_velocity = self.linear_velocity * self.global_basis
+	var drag = -DRAG * body_velocity * body_velocity.abs()
+	self.apply_central_force(self.global_basis * drag)
+	var body_angular_velocity = self.angular_velocity * self.global_basis
+	var angular_drag = -ANGULAR_DRAG * body_angular_velocity * body_angular_velocity.abs()
+	self.apply_torque(self.global_basis * angular_drag)
+
+
 func actuate_servo(id, percentage):
 	if percentage == 0:
 		return
@@ -235,21 +257,21 @@ func actuate_servo(id, percentage):
 	var force = clamp((percentage - 0.5) / 0.4, -1, 1) * -THRUST
 	match id:
 		0:
-			self.add_force_local_if_underwater($t1.transform.basis*Vector3(force,0,0), $t1.position)
+			apply_thrust($t1, force)
 		1:
-			self.add_force_local_if_underwater($t2.transform.basis*Vector3(force,0,0), $t2.position)
+			apply_thrust($t2, force)
 		2:
-			self.add_force_local_if_underwater($t3.transform.basis*Vector3(force,0,0), $t3.position)
+			apply_thrust($t3, force)
 		3:
-			self.add_force_local_if_underwater($t4.transform.basis*Vector3(force,0,0), $t4.position)
+			apply_thrust($t4, force)
 		4:
-			self.add_force_local_if_underwater($t5.transform.basis*Vector3(force,0,0), $t5.position)
+			apply_thrust($t5, force)
 		5:
-			self.add_force_local_if_underwater($t6.transform.basis*Vector3(force,0,0), $t6.position)
+			apply_thrust($t6, force)
 		6:
-			self.add_force_local_if_underwater($t7.transform.basis*Vector3(force,0,0), $t7.position)
+			apply_thrust($t7, force)
 		7:
-			self.add_force_local_if_underwater($t8.transform.basis*Vector3(force,0,0), $t8.position)
+			apply_thrust($t8, force)
 		14:
 			$Camera3D.rotation_degrees.x = -45 + 120 * percentage
 		12:
