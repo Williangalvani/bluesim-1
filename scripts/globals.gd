@@ -16,6 +16,8 @@ const colors = {
 @export var physics_rate = 60
 @export var wind_dir = 0
 @export var wind_speed = 5
+# world height of the water surface, depth is measured from here
+var surface_altitude = 3.53
 var active_vehicle = null
 var active_level = ""
 var sitl_pid = 0
