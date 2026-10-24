@@ -206,7 +206,7 @@ func _physics_process(delta):
 	phys_time = phys_time + 1.0 / Globals.physics_rate
 	process_keys()
 	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
-	calculated_acceleration.y += 10
+	calculated_acceleration -= get_gravity() * gravity_scale
 	last_velocity = self.linear_velocity
 	get_servos()
 	if peer:
