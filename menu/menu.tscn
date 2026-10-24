@@ -147,6 +147,10 @@ func launch_sitl():
 			
 		else:
 			_start_sitl()
+	elif Globals.isHTML5:
+		$HBoxContainer/Menu/Buttons.visible = true
+		$HBoxContainer/Menu/CheckBox.visible = false
+		add_status(\"Connect Cockpit to sitl://ardusub?model=JSON to drive with ArduSub\")
 	else:
 		$HBoxContainer/Menu/Buttons.visible = true
 		$HBoxContainer/Menu/CheckBox.visible = false
@@ -185,7 +189,8 @@ func _on_customLevel_pressed(filename):
 
 func _on_timer_timeout():
 	var args = Array(OS.get_cmdline_args())
-	if args.has(\"--pool\"):
+	var web_pool = Globals.isHTML5 and JavaScriptBridge.eval(\"new URLSearchParams(location.search).has('pool')\")
+	if args.has(\"--pool\") or web_pool:
 		self._on_poolLevel_pressed()
 "
 
