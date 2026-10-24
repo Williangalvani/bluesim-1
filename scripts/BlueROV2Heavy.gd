@@ -19,6 +19,7 @@ var last_velocity = Vector3(0, 0, 0)
 var calculated_acceleration = Vector3(0, 0, 0)
 
 var buoyancy = 10* self.mass * self.gravity_scale  # Newtons
+var hull_height = 0.254  # m, the frame height, over which buoyancy fades out at the surface
 var _initial_position = 0
 var phys_time = 0
 
