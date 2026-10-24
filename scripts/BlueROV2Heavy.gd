@@ -25,6 +25,15 @@ func connect_fmd_in():
 		print("Failed to connect fdm_in")
 
 
+func actuate_servos(pwms):
+	for i in range(pwms.size()):
+		var pwm = pwms[i]
+		# ArduPilot sends 0 for outputs that are not initialised yet (e.g. while booting)
+		if pwm == 0:
+			continue
+		actuate_servo(i, (float(pwm) - 1000) / 1000)
+
+
 func get_servos():
 	if udp.get_available_packet_count() == 0:
 		return
@@ -50,9 +59,11 @@ func get_servos():
 
 	if magic != 18458:
 		return
-	for i in range(0, 17):
+	var pwms = []
+	for i in range(0, 16):
 		buffer.seek(8 + i * 2)
-		actuate_servo(i, (float(buffer.get_u16()) - 1000) / 1000)
+		pwms.append(buffer.get_u16())
+	actuate_servos(pwms)
 
 
 func send_fdm():
