@@ -4,6 +4,12 @@ const THRUST = 50
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
+
+# In browsers there is no UDP, the SITL runs in Cockpit (sitl:// connection) and talks over this channel
+const WEB_CHANNEL_NAME = "cockpit-sitl-json"
+var web_channel: JavaScriptObject
+var web_on_message: JavaScriptObject  # must stay referenced, or the callback is freed
+var web_pwm = []
 var start_time = Time.get_ticks_msec()
 
 var last_velocity = Vector3(0, 0, 0)
@@ -21,11 +27,37 @@ var phys_time = 0
 @onready var ping1d = $ping1d
 
 func connect_fmd_in():
+	if Globals.isHTML5:
+		web_channel = JavaScriptBridge.create_object("BroadcastChannel", WEB_CHANNEL_NAME)
+		web_on_message = JavaScriptBridge.create_callback(_on_web_message)
+		web_channel.onmessage = web_on_message
+		return
 	if udp.bind(9002) != OK:
 		print("Failed to connect fdm_in")
 
 
+func _on_web_message(args):
+	var message = JSON.parse_string(str(args[0].data))
+	if typeof(message) != TYPE_DICTIONARY or not message.has("pwm"):
+		return
+	web_pwm = message["pwm"]
+	peer = true
+
+
+func actuate_servos(pwms):
+	for i in range(pwms.size()):
+		var pwm = pwms[i]
+		# ArduPilot sends 0 for outputs that are not initialised yet (e.g. while booting)
+		if pwm == 0:
+			continue
+		actuate_servo(i, (float(pwm) - 1000) / 1000)
+
+
 func get_servos():
+	if Globals.isHTML5:
+		# messages arrive between physics ticks, keep applying the latest outputs
+		actuate_servos(web_pwm)
+		return
 	if udp.get_available_packet_count() == 0:
 		return
 
@@ -50,13 +82,11 @@ func get_servos():
 
 	if magic != 18458:
 		return
-	for i in range(0, 17):
+	var pwms = []
+	for i in range(0, 16):
 		buffer.seek(8 + i * 2)
-		var pwm = buffer.get_u16()
-		# ArduPilot sends 0 for outputs that are not initialised yet (e.g. while booting)
-		if pwm == 0:
-			continue
-		actuate_servo(i, (float(pwm) - 1000) / 1000)
+		pwms.append(buffer.get_u16())
+	actuate_servos(pwms)
 
 
 func send_fdm():
@@ -103,6 +133,9 @@ func send_fdm():
 
 	}
 	var JSON_string = "\n" + JSON.stringify(JSON_fmt) + "\n"
+	if Globals.isHTML5:
+		web_channel.postMessage(JSON_string)
+		return
 	buffer.put_utf8_string(JSON_string)
 	udp.put_packet(buffer.data_array)
 
@@ -160,9 +193,8 @@ func _ready():
 		Globals.active_vehicle = self
 	else:
 		return
-	if not Globals.isHTML5:
-		print("connecting fdm...")
-		connect_fmd_in()
+	print("connecting fdm...")
+	connect_fmd_in()
 	print("init done")
 	print(is_inside_tree())
 
@@ -172,9 +204,6 @@ func _physics_process(delta):
 		return
 	phys_time = phys_time + 1.0 / Globals.physics_rate
 	process_keys()
-	if Globals.isHTML5:
-		print("html5")
-		return
 	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
 	calculated_acceleration.y += 10
 	last_velocity = self.linear_velocity
