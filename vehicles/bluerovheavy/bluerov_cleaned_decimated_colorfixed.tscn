@@ -1,0 +1,5 @@
+[gd_scene load_steps=2 format=3 uid="uid://1wagv83d1du3"]
+
+[ext_resource type="PackedScene" uid="uid://cpltoi3887jfg" path="res://vehicles/bluerovheavy/bluerov cleaned decimated.gltf" id="1_8ors6"]
+
+[node name="bluerov cleaned decimated" instance=ExtResource("1_8ors6")]

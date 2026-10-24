@@ -1,4 +1,4 @@
-extends MeshInstance
+extends MeshInstance3D
 
 signal updatePing360Display
 var last_points = [[0, 0], [0, 0], [0, 0]]
@@ -16,7 +16,7 @@ var angle = 0
 var last_angle = angle
 # ColorRect is the Node on which I have my shader material attached
 
-var texture = ImageTexture.new()
+var texture = Image.create(100, 100, false, Image.FORMAT_RGBA8)
 
 
 func _ready():
@@ -28,6 +28,9 @@ func _ready():
 		new_targets.append(max_offset - i * increment)
 	target_offsets = new_targets
 	print(target_offsets)
+	print(texture)
+	print(texture.get_format())
+	print("pin360 ready")
 
 
 func _physics_process(_delta):
@@ -35,7 +38,7 @@ func _physics_process(_delta):
 		return
 	if last_angle == angle:
 		return
-	var space_state = get_world().direct_space_state
+	var space_state = get_world_3d().direct_space_state
 	# use global coordinates, not local to node
 	var target_list = []
 	#var target_offsets = [0.0]
@@ -43,16 +46,16 @@ func _physics_process(_delta):
 		target_list.append(
 			(
 				global_transform.origin
-				+ self.global_transform.basis.xform(
+				+ self.global_transform.basis * (
 					Vector3(0, max_distance * offset, max_distance).rotated(
-						Vector3(0, 1, 0), deg2rad(angle)
+						Vector3(0, 1, 0), deg_to_rad(angle)
 					)
 				)
 			)
 		)
 	last_points = []
 	for cur_target in target_list:
-		var result = space_state.intersect_ray(global_transform.origin, cur_target, [self])
+		var result = space_state.intersect_ray(PhysicsRayQueryParameters3D.create(global_transform.origin, cur_target, 0xff, [self]))
 		#$target.global_transform.origin = cur_target
 		if 'position' in result:
 			var distance_vector = global_transform.origin - result['position']
@@ -65,5 +68,6 @@ func _physics_process(_delta):
 func _process(_delta):
 	if not Globals.ping360_enabled:
 		return
+	print("process")
 	emit_signal("updatePing360Display", angle, last_points)
 	angle = (angle + 1) % 360

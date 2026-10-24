@@ -1,12 +1,14 @@
 extends Node
 
-# Reference: https://docs.godotengine.org/en/3.0/tutorials/io/background_loading.html#doc-background-loading
+# RefCounted: https://docs.godotengine.org/en/3.0/tutorials/io/background_loading.html#doc-background-loading
 
 var current_scene = null
 var loader = null
 var time_max = 1000/16 # ms
 # Control loading scene
 var wait_frames = 0
+
+var current_path = ""
 
 func show_error():
 	print("Error while loading scene")
@@ -16,54 +18,28 @@ func _ready():
 	current_scene = root.get_child(root.get_child_count() -1)
 
 func goto_scene(path):
-	loader = ResourceLoader.load_interactive(path)
-	if loader == null: 
-		show_error()
-		return
+	print("going to scene", path)
+	current_path = path
+	ResourceLoader.load(path)
 
 	set_process(true)
 
 	# get rid of the old scene
 	current_scene.queue_free()
 
-	get_tree().change_scene("res://scenery/misc/loading/loading.tscn")
-	wait_frames = 1
+	# get_tree().change_scene_to_file("res://scenery/misc/loading/loading.tscn")
+	var resource = load(current_path)
+	set_new_scene(resource)
 
-func _process(time):	
-	
-	if loader == null:
-		# no need to process anymore
-		set_process(false)
-		return
-
-	# wait for frames to let the "loading" animation to show up
-	if wait_frames > 0: 
-		wait_frames -= 1
-		return
-
-	var t = OS.get_ticks_msec()
-	while OS.get_ticks_msec() < t + time_max: # use "time_max" to control how much time we block this thread
-
-		# poll your loader
-		var err = loader.poll()
-
-		if err == ERR_FILE_EOF: # load finished
-			var resource = loader.get_resource()
-			loader = null
-			set_new_scene(resource)
-			break
-		elif err == OK:
-			update_progress()
-		else: # error during loading
-			show_error()
-			loader = null
-			break
+func _process(_time):
+	pass
 
 func update_progress():
-	var progress = float(loader.get_stage()) / loader.get_stage_count()
-	var loading_scene = get_tree().get_current_scene()
-	loading_scene.get_node("Label").text = "Loading.. (%d %%)" % (progress * 100)
+	#var progress = float(ResourceLoader.get_stage()) / loader.get_stage_count()
+	#var loading_scene = get_tree().get_current_scene()
+	#loading_scene.get_node("Label").text = "Loading.. (%d %%)" % (progress * 100)
+	pass
 
 func set_new_scene(scene_resource):
-	current_scene = scene_resource.instance()
+	current_scene = scene_resource.instantiate()
 	get_node("/root").add_child(current_scene)

@@ -1,0 +1,75 @@
+[gd_scene load_steps=10 format=3 uid="uid://dykuk62nuk0bf"]
+
+[ext_resource type="Script" path="res://scripts/buoyheavy.gd" id="1_w0oog"]
+
+[sub_resource type="SphereShape3D" id="4"]
+radius = 0.0739091
+
+[sub_resource type="SphereMesh" id="5"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nkbt5"]
+albedo_color = Color(0.0705882, 0.0980392, 0.811765, 1)
+
+[sub_resource type="PhysicsMaterial" id="6"]
+friction = 3.0
+rough = true
+bounce = 10.0
+absorbent = true
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_x0fqh"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_s1gle"]
+height = 0.431292
+radius = 0.0242735
+
+[sub_resource type="SphereMesh" id="SphereMesh_krtvj"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_n2ue1"]
+radius = 0.0525692
+
+[node name="Node3D" type="Node3D"]
+
+[node name="ConeTwistJoint3D" type="ConeTwistJoint3D" parent="."]
+swing_span = 0.0523599
+node_a = NodePath("../boia")
+node_b = NodePath("../pino")
+transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, -0.00880051, 0.192896, 0.0157247)
+
+[node name="boia" type="RigidBody3D" parent="." groups=["buoyant"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.303096, 0.0157247)
+mass = 2.16
+linear_damp = 1.0
+angular_damp = 0.869
+script = ExtResource("1_w0oog")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="boia"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.012017, -0.0215679, 2.98023e-08)
+shape = SubResource("4")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="boia"]
+transform = Transform3D(0.148141, 0, 0, 0, 0.148141, 0, 0, 0, 0.148141, -0.012017, -0.0215679, 2.98023e-08)
+mesh = SubResource("5")
+surface_material_override/0 = SubResource("StandardMaterial3D_nkbt5")
+
+[node name="pino" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.466664, 0.0157247)
+physics_material_override = SubResource("6")
+linear_damp = 1.313
+angular_damp_mode = 1
+angular_damp = 0.5
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="pino"]
+transform = Transform3D(0.0469218, 0, 0, 0, 0.232389, 0, 0, 0, 0.0476397, -0.00863858, 0.443998, 0.00391483)
+mesh = SubResource("CylinderMesh_x0fqh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="pino"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00855663, 0.445378, 0.00483656)
+shape = SubResource("CylinderShape3D_s1gle")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="pino"]
+transform = Transform3D(0.102862, 0, 0, 0, 0.102862, 0, 0, 0, 0.102862, -0.00949386, 0.192225, 0.00415325)
+mesh = SubResource("SphereMesh_krtvj")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="pino"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0101709, 0.193475, 0.00126314)
+shape = SubResource("SphereShape3D_n2ue1")
