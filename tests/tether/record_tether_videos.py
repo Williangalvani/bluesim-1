@@ -29,7 +29,7 @@ import argparse, concurrent.futures, json, os, re, shutil, subprocess, sys, temp
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
-from run_tether_tests import SCENARIOS, grade, sustained  # noqa: E402
+from run_tether_tests import SCENARIOS, add_sustained, grade  # noqa: E402
 
 FONT_CANDIDATES = ["/usr/share/fonts/noto/NotoSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"]
@@ -134,7 +134,7 @@ def record(args, scenario, display_lock):
     os.remove(avi)
 
     r = json.load(open(js))
-    r["worst"]["bend_over_sustained"] = {"value": sustained(r["series"], "bend_over_max")}
+    add_sustained(r)
     r["errors"] = [l for l in text.splitlines() if "SCRIPT ERROR" in l][:5]
     level, notes = grade(r)
     dur = probe_duration(mp4)
