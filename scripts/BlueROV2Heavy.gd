@@ -184,7 +184,7 @@ func _physics_process(delta):
 		print("html5")
 		return
 	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
-	calculated_acceleration.y += 10
+	calculated_acceleration -= get_gravity() * gravity_scale
 	last_velocity = self.linear_velocity
 	get_servos()
 	if peer:
