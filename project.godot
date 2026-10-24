@@ -212,4 +212,5 @@ jolt_physics_3d/limits/max_linear_velocity=10.0
 
 [rendering]
 
+renderer/rendering_method.web="gl_compatibility"
 environment/defaults/default_environment="res://scenery/defaultEnvironment.tres"
