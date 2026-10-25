@@ -5,9 +5,11 @@ const THRUST = 50
 # of ~0.85 over the frame's side, top and front areas, which tops out at the 1.5 m/s forward speed
 # Blue Robotics quotes for the BlueROV2
 const DRAG = Vector3(50, 113, 63)
-# quadratic rotational drag around the body axes, in N*m/(rad/s)^2: together with the body's angular_damp,
-# a full-thrust yaw rate of ~160 deg/s, just above the ~150 deg/s ArduSub asks for at full stick
-const ANGULAR_DRAG = Vector3(5, 5, 5)
+# linear rotational damping around the pitch, yaw and roll body axes, in N*m/(rad/s): what Godot's
+# angular_damp of 6 gave pitch and roll, and almost none for yaw, which water resists mostly quadratically
+const ANGULAR_DAMP = Vector3(5.9, 1, 7.1)
+# quadratic rotational drag around the same axes, in N*m/(rad/s)^2, for a full-thrust yaw rate of ~100 deg/s
+const ANGULAR_DRAG = Vector3(5, 21.6, 5)
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
@@ -246,7 +248,7 @@ func apply_water_drag():
 	var drag = -DRAG * body_velocity * body_velocity.abs()
 	self.apply_central_force(self.global_basis * drag)
 	var body_angular_velocity = self.angular_velocity * self.global_basis
-	var angular_drag = -ANGULAR_DRAG * body_angular_velocity * body_angular_velocity.abs()
+	var angular_drag = -ANGULAR_DAMP * body_angular_velocity - ANGULAR_DRAG * body_angular_velocity * body_angular_velocity.abs()
 	self.apply_torque(self.global_basis * angular_drag)
 
 
