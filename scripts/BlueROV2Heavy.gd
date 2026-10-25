@@ -195,6 +195,7 @@ func _ready():
 	if Globals.active_vehicle == "bluerovheavy":
 		print("pointing camera to rov...")
 		$Camera3D.set_current(true)
+	set_spotlights_energy($light1.light_energy)
 	_initial_position = get_global_transform().origin
 	print("setting phyisics process...")
 	set_physics_process(true)
@@ -252,6 +253,14 @@ func apply_water_drag():
 	self.apply_torque(self.global_basis * angular_drag)
 
 
+func set_spotlights_energy(energy):
+	for light in [$light1, $light2, $light3, $light4]:
+		light.light_energy = energy
+		# an unlit light still renders its shadow map every frame
+		if light.shadow_enabled != (energy > 0):
+			light.shadow_enabled = energy > 0
+
+
 func actuate_servo(id, percentage):
 	if percentage == 0:
 		return
@@ -280,10 +289,7 @@ func actuate_servo(id, percentage):
 		12:
 			percentage -= 0.1
 			percentage = max(0, percentage)
-			$light1.light_energy = percentage * 5
-			$light2.light_energy = percentage * 5
-			$light3.light_energy = percentage * 5
-			$light4.light_energy = percentage * 5
+			set_spotlights_energy(percentage * 5)
 			$scatterlight.light_energy = percentage * 0.025
 			if percentage < 0.01 and light_glows[0].get_parent() != null:
 				for light in light_glows:
@@ -344,19 +350,13 @@ func _unhandled_input(event):
 		if percentage > 0:
 			for light in light_glows:
 				self.add_child(light)
-		$light1.light_energy = percentage
-		$light2.light_energy = percentage
-		$light3.light_energy = percentage
-		$light4.light_energy = percentage
+		set_spotlights_energy(percentage)
 		$scatterlight.light_energy = percentage * 0.00005
 
 	if event.is_action("lights_down"):
 		var percentage = min(max(0, $light1.light_energy - 0.1), 5)
 		print("lights to", percentage)
-		$light1.light_energy = percentage
-		$light2.light_energy = percentage
-		$light3.light_energy = percentage
-		$light4.light_energy = percentage
+		set_spotlights_energy(percentage)
 		$scatterlight.light_energy = percentage * 0.00005
 		if percentage == 0:
 			for light in light_glows:
