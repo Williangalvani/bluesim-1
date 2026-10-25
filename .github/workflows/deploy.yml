@@ -1,0 +1,87 @@
+name: "godot-ci export"
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  export-web:
+    name: Web Export
+    runs-on: ubuntu-latest
+    env:
+      GODOT_WEB_VERSION: 4.7.2
+      BLENDER_VERSION: 4.2.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # The export templates are a 1.3 GB download, of which the web export only needs a few MB
+      - name: Restore Godot web export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_WEB_VERSION }}.stable
+          key: godot-web-templates-${{ env.GODOT_WEB_VERSION }}
+      - name: Install Godot
+        run: |
+          # Kept out of the checkout, which Godot scans as the project
+          cd "$RUNNER_TEMP"
+          release=https://github.com/godotengine/godot/releases/download/${GODOT_WEB_VERSION}-stable
+          curl -fsSL -o godot.zip "$release/Godot_v${GODOT_WEB_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_WEB_VERSION}-stable_linux.x86_64" godot
+          if [ "${{ steps.templates.outputs.cache-hit }}" != 'true' ]; then
+            curl -fsSL -o templates.tpz "$release/Godot_v${GODOT_WEB_VERSION}-stable_export_templates.tpz"
+            templates=~/.local/share/godot/export_templates/${GODOT_WEB_VERSION}.stable
+            mkdir -p "$templates"
+            unzip -q -j templates.tpz 'templates/web_*' 'templates/version.txt' -d "$templates"
+            rm templates.tpz
+          fi
+      # Godot imports the .blend models through Blender, and only reads its path from the editor settings
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6
+          minor=${BLENDER_VERSION%.*}
+          curl -fsSL "https://download.blender.org/release/Blender${minor}/blender-${BLENDER_VERSION}-linux-x64.tar.xz" | tar -xJ -C "$RUNNER_TEMP"
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nfilesystem/import/blender/blender_path = "%s"\n' \
+            "$RUNNER_TEMP/blender-${BLENDER_VERSION}-linux-x64/blender" > ~/.config/godot/editor_settings-${GODOT_WEB_VERSION%.*}.tres
+      - name: Web Build
+        shell: bash
+        run: |
+          mkdir -v -p build/web
+          "$RUNNER_TEMP/godot" --headless --path . --import
+          "$RUNNER_TEMP/godot" --headless --path . --export-release Web build/web/index.html 2>&1 | tee export.log
+          # Godot exits 0 after exporting with resources it could not load
+          if grep -q 'Failed loading resource' export.log; then exit 1; fi
+          test -s build/web/index.pck
+          test -s build/web/index.wasm
+          # BlueSim is GPLv2, so the licence and the exact source commit ship with the build
+          cp LICENSE build/web/
+          echo "BlueSim web build from https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}, licensed under the GPLv2 in LICENSE." > build/web/NOTICE.txt
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bluesim-web
+          path: build/web
+
+  release-web:
+    name: Web Release
+    needs: export-web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bluesim-web
+          path: bluesim-web
+      - name: Upload to the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          (cd bluesim-web && zip -qr ../bluesim-web.zip .)
+          gh release view latest > /dev/null 2>&1 || gh release create latest --title latest --notes "Builds from master" --target "$GITHUB_SHA"
+          gh release upload latest bluesim-web.zip --clobber
