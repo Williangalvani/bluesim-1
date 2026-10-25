@@ -12,6 +12,9 @@ const ANGULAR_DAMP = Vector3(5.9, 1, 7.1)
 const ANGULAR_DRAG = Vector3(5, 21.6, 5)
 # a thruster less than a duct diameter under the surface sucks air into its propeller, losing thrust the closer it gets
 const VENTILATION_DEPTH = 0.1  # m
+const ThrusterBubbles = preload("res://scripts/thruster_bubbles.gd")
+# down, as a vertical thruster blows, and slightly forward so they rise back up in front of the camera
+const BUBBLES_DIRECTION = Vector3(0, -1, 0.1)
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
@@ -34,6 +37,9 @@ var phys_time = 0
 var camera_tilt = 0.0  # degrees
 
 @onready var light_glows = [$light_glow, $light_glow2, $light_glow3, $light_glow4]
+var thruster_bubbles = []
+# the most air any thruster took in this physics tick, from 0 to 1
+var ventilation = 0.0
 
 @onready var ljoint = get_tree().get_root().find_child("ljoint", true, false)
 @onready var rjoint = get_tree().get_root().find_child("rjoint", true, false)
@@ -200,6 +206,9 @@ func _ready():
 		print("pointing camera to rov...")
 		$Camera3D.set_current(true)
 	set_spotlights_energy($light1.light_energy)
+	for thruster in [$t5, $t6]:
+		thruster_bubbles.append(ThrusterBubbles.new(thruster, BUBBLES_DIRECTION))
+		add_child(thruster_bubbles[-1])
 	_initial_position = get_global_transform().origin
 	print("setting phyisics process...")
 	set_physics_process(true)
@@ -225,6 +234,9 @@ func _physics_process(delta):
 	last_velocity = self.linear_velocity
 	apply_water_drag()
 	get_servos()
+	for bubbles in thruster_bubbles:
+		bubbles.blow(ventilation)
+	ventilation = 0.0
 	$Camera3D.rotation_degrees.x = 0.8 * $Camera3D.rotation_degrees.x + 0.2 * camera_tilt
 	if peer:
 		send_fdm()
@@ -248,6 +260,10 @@ func apply_thrust(thruster: Node3D, force: float):
 	var immersion = clamp((Globals.surface_altitude - thruster.global_position.y) / VENTILATION_DEPTH, 0, 1)
 	# the thruster nodes are scaled to fit their meshes, which must not scale the force too
 	self.add_force_local(thruster.transform.basis.x.normalized() * force * immersion, thruster.position)
+	# out of the water there is nothing to carry the air off as bubbles, and from half throttle on a ventilating
+	# propeller is already churning in as much air as it can
+	if immersion > 0:
+		ventilation = max(ventilation, min(abs(force) / THRUST * 2, 1) * (1 - immersion))
 
 
 func apply_water_drag():
