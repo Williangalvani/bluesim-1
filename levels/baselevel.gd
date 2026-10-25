@@ -5,6 +5,10 @@ extends Control
 func _enter_tree():
 	if not OS.has_feature("web") or Globals.active_level:
 		return
+	if JavaScriptBridge.eval("new URLSearchParams(location.search).has('maptiles')"):
+		get_tree().root.add_child.call_deferred(load("res://tools/map_tiles.gd").new())
+		queue_free()
+		return
 	Globals.active_vehicle = "bluerovheavy"
 	# ?level=NAME starts the custom level packed as res://levels/NAME.pck
 	var level = JavaScriptBridge.eval("new URLSearchParams(location.search).get('level') ?? 'reef'")
@@ -12,6 +16,8 @@ func _enter_tree():
 	Globals.active_level = "res://custom_level.tscn"
 
 func _ready():
+	if is_queued_for_deletion():
+		return
 	# the water is BlueSim's, not the level's, so custom levels get buoyancy too
 	var environment = Node3D.new()
 	environment.set_script(preload("res://scripts/environment.gd"))
