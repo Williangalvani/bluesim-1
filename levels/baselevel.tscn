@@ -371,7 +371,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.21178, 10.2615, 4.21928)
 script = ExtResource("5")
 
 [node name="BlueRovHeavy" parent="ViewportCamera/SubViewport" instance=ExtResource("9")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.33197, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.41, 0)
 
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
