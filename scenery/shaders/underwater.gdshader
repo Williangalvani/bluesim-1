@@ -49,7 +49,6 @@ uniform sampler2D normalmap_b_sampler : hint_normal;			// Normalmap sampler B
 
 uniform sampler2D foam_sampler : hint_default_black;					// Foam sampler
 uniform float 	foam_level 		 = 0.5;							// Foam level -> distance from the object (0.0 - 0.5)
-uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 // Volume settings:
 uniform float 	refraction 		 = 0.075;						// Refraction of the water
 uniform float	alpha_factor 	 = 1.0;
@@ -139,24 +138,11 @@ void fragment()
 	// Refraction UV:
 	vec3	ref_normalmap				 = normalmap * 2.0 -1.0;
 			ref_normalmap				 = normalize(vertex_tangent*ref_normalmap.x + vertex_binormal*ref_normalmap.y + vertex_normal*ref_normalmap.z);
-	vec2 	ref_uv						 = SCREEN_UV + (ref_normalmap.xy * refraction) / vertex_height;
-	
-	// Ground depth:
-	float	depth_blend_pow				 = 0.0;
-
-	// Ground color:
-	vec3 	screen_color 				 = textureLod(SCREEN_TEXTURE, ref_uv, depth_blend_pow * 2.5).rgb;
-	
-	vec3 	dye_color 					 = mix(color_shallow.rgb, ambient_color.rgb, depth_blend_pow);
-	vec3	color 						 = mix(screen_color*dye_color, dye_color*0.25, depth_blend_pow*0.5);
-	
 	
 		// Set all values:
 	vec3 world_view = (INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz;
 	float transparency_map = 1.0 - step(0.25, pow(max(0.0, dot(ref_normalmap, world_view)), 2.0));
 	ALBEDO = color_deep.rgb;
-	// Calculate the brightness of the original color
-	float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
 	// Blend the deep_color with the original color based on brightness
 	EMISSION = mix(color_deep.rgb, color_shallow.rgb * (1.0 - transparency_map), (1.0 - transparency_map));
 	METALLIC = 1.0;
