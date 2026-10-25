@@ -10,6 +10,8 @@ const DRAG = Vector3(50, 113, 63)
 const ANGULAR_DAMP = Vector3(5.9, 1, 7.1)
 # quadratic rotational drag around the same axes, in N*m/(rad/s)^2, for a full-thrust yaw rate of ~100 deg/s
 const ANGULAR_DRAG = Vector3(5, 21.6, 5)
+# a thruster less than a duct diameter under the surface sucks air into its propeller, losing thrust the closer it gets
+const VENTILATION_DEPTH = 0.1  # m
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
@@ -209,7 +211,7 @@ func add_force_local(force: Vector3, pos: Vector3):
 	self.apply_force(force_local, pos_local)
 
 func add_force_local_if_underwater(force: Vector3, pos: Vector3):
-	if (self.transform.basis * pos).z > 3.5:
+	if (self.global_position + self.global_basis * pos).y > Globals.surface_altitude:
 		return
 	var pos_local = self.transform.basis * pos
 	var force_local = self.transform.basis * force
@@ -217,8 +219,9 @@ func add_force_local_if_underwater(force: Vector3, pos: Vector3):
 
 
 func apply_thrust(thruster: Node3D, force: float):
+	var immersion = clamp((Globals.surface_altitude - thruster.global_position.y) / VENTILATION_DEPTH, 0, 1)
 	# the thruster nodes are scaled to fit their meshes, which must not scale the force too
-	self.add_force_local_if_underwater(thruster.transform.basis.x.normalized() * force, thruster.position)
+	self.add_force_local(thruster.transform.basis.x.normalized() * force * immersion, thruster.position)
 
 
 func apply_water_drag():
