@@ -1,11 +1,16 @@
 extends CanvasLayer
-# What the vehicle's camera shows as it crosses the water surface: the sky and no water fog above it, water drops
-# drying off its lens as it comes out, and whitewater on each crossing
+# What the vehicle's camera shows as it crosses the water surface: the sky and no water fog above it, its image split
+# along the waterline while the surface crosses its dome, water drops drying off its lens as it comes out, and
+# whitewater on each crossing
 
 const DRY_TIME = 4.0  # s, for the last drop on the lens to dry
 const SPLASH_TIME = 0.4  # s
 # m, so a camera bobbing at the surface does not cross it on every ripple
 const HYSTERESIS = 0.005
+# m, from the camera, so the surface crosses its image while it is nearer the camera than that
+const DOME_RADIUS = 0.05
+# m, well inside the dome, so the camera does not cut off the water between it and the line
+const NEAR_IN_DOME = 0.005
 
 # water on the lens, drawn over the image rather than refracting it, since the compatibility renderer gives a canvas
 # in a SubViewport a blank screen texture: drops that run down around the dome or dry off one by one, and whitewater on
@@ -135,13 +140,48 @@ void fragment() {
 }
 """
 
+# the image split along the water's line on the dome, the other side of it showing what a camera there would see
+const SPLIT_SHADER = """
+shader_type canvas_item;
+
+uniform sampler2D other_side : filter_linear;
+uniform mat3 camera_basis;
+uniform float tan_half_fov;
+// how far up a view direction points where it meets the water on the dome
+uniform float waterline;
+uniform bool other_side_is_air;
+
+void fragment() {
+	float aspect = SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
+	vec2 ndc = SCREEN_UV * 2.0 - 1.0;
+	vec3 view = normalize(camera_basis * vec3(ndc.x * tan_half_fov * aspect, -ndc.y * tan_half_fov, -1.0));
+	// waves running along the dome, by heading so they stay put as the camera pans
+	float heading = atan(view.x, view.z);
+	float line = waterline + 0.03 * sin(heading * 7.0 + TIME * 2.3) + 0.015 * sin(heading * 19.0 - TIME * 3.7);
+	// from just under the surface the water's underside shows above the horizon, as a band with a straight edge
+	if (!other_side_is_air) {
+		line = min(line, 0.0);
+	}
+	float above = view.y - line;
+	float other = smoothstep(-0.006, 0.006, other_side_is_air ? above : -above);
+	// the water clinging to the dome along the line catches the light
+	float meniscus = 0.6 * (1.0 - smoothstep(0.0, 0.02, abs(above)));
+	vec3 color = mix(texture(other_side, SCREEN_UV).rgb, vec3(0.85, 0.93, 1.0), meniscus);
+	COLOR = vec4(color, max(other, meniscus));
+}
+"""
+
 var camera: Camera3D
+var camera_near: float
 var underwater_environment: Environment
 var surface_environment = make_surface_environment()
 var above_water = false
 var wetness = 0.0
 var splash = 0.0
-var overlay = ColorRect.new()
+var other_side = SubViewport.new()
+var other_camera = Camera3D.new()
+var split = make_overlay(SPLIT_SHADER)
+var overlay = make_overlay(LENS_WATER_SHADER % LensDrops.MAX_DROPS)
 var lens_drops = LensDrops.new()
 
 
@@ -160,21 +200,32 @@ static func make_surface_environment() -> Environment:
 	return environment
 
 
+static func make_overlay(code: String) -> ColorRect:
+	var shader = Shader.new()
+	# the material only compiles the code it has when it gets the shader, not code set afterwards
+	shader.code = code
+	var rect = ColorRect.new()
+	rect.material = ShaderMaterial.new()
+	rect.material.shader = shader
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.visible = false
+	return rect
+
+
 func _init(vehicle_camera: Camera3D):
 	camera = vehicle_camera
 	underwater_environment = camera.environment
-	var shader = Shader.new()
-	# the material only compiles the code it has when it gets the shader, not code set afterwards
-	shader.code = LENS_WATER_SHADER % LensDrops.MAX_DROPS
-	overlay.material = ShaderMaterial.new()
-	overlay.material.shader = shader
-	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.visible = false
+	camera_near = camera.near
+	other_side.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	other_side.add_child(other_camera)
+	add_child(other_side)
+	add_child(split)
 	add_child(overlay)
 
 
 func _ready():
+	split.material.set_shader_parameter("other_side", other_side.get_texture())
 	overlay.material.set_shader_parameter("trails", lens_drops.texture)
 	overlay.material.set_shader_parameter("map_around", LensDrops.MAP_AROUND)
 	overlay.material.set_shader_parameter("dry_time", DRY_TIME)
@@ -202,6 +253,7 @@ func _process(delta):
 			var top = (view_to_dome() * Vector3(0, tan_half_fov, -1)).normalized()
 			var bottom = (view_to_dome() * Vector3(0, -tan_half_fov, -1)).normalized()
 			lens_drops.wet(acos(top.dot(dome_up)), acos(bottom.dot(dome_up)))
+	update_split(height)
 	wetness = max(wetness - delta / DRY_TIME, 0)
 	splash = max(splash - delta / SPLASH_TIME, 0)
 	# blending over every pixel of the image is not free, so only while there is water to draw
@@ -221,3 +273,24 @@ func _process(delta):
 func view_to_dome() -> Basis:
 	return camera.get_parent_node_3d().global_transform.basis.inverse() * camera.global_transform.basis
 
+
+# a second camera renders the other side of the surface, so only while the surface crosses the dome
+func update_split(height: float):
+	split.visible = abs(height) < DOME_RADIUS
+	other_side.render_target_update_mode = SubViewport.UPDATE_ALWAYS if split.visible else SubViewport.UPDATE_DISABLED
+	camera.near = NEAR_IN_DOME if split.visible else camera_near
+	if not split.visible:
+		return
+	# half the resolution, since it shows either sky or the murk of the water
+	other_side.size = Vector2i(get_viewport().get_visible_rect().size / 2)
+	other_camera.fov = camera.fov
+	other_camera.near = camera.near
+	other_camera.far = camera.far
+	other_camera.environment = underwater_environment if above_water else surface_environment
+	other_camera.global_transform = camera.global_transform
+	# where the dome is on the other side of the surface, so it does not look at the water from the wrong side
+	other_camera.global_position.y = Globals.surface_altitude + (-0.01 if above_water else 0.01)
+	split.material.set_shader_parameter("camera_basis", camera.global_transform.basis)
+	split.material.set_shader_parameter("tan_half_fov", tan(deg_to_rad(camera.fov / 2)))
+	split.material.set_shader_parameter("waterline", -height / DOME_RADIUS)
+	split.material.set_shader_parameter("other_side_is_air", not above_water)
