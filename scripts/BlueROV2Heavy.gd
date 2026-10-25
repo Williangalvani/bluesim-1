@@ -24,6 +24,8 @@ var buoyancy = 10* self.mass * self.gravity_scale  # Newtons
 var hull_height = 0.254  # m, the frame height, over which buoyancy fades out at the surface
 var _initial_position = 0
 var phys_time = 0
+# the tilt servo moves in 1 us steps of ~0.1 degrees, so the camera eases toward it instead of jumping
+var camera_tilt = 0.0  # degrees
 
 @onready var light_glows = [$light_glow, $light_glow2, $light_glow3, $light_glow4]
 
@@ -200,6 +202,7 @@ func _physics_process(delta):
 	last_velocity = self.linear_velocity
 	apply_water_drag()
 	get_servos()
+	$Camera3D.rotation_degrees.x = 0.8 * $Camera3D.rotation_degrees.x + 0.2 * camera_tilt
 	if peer:
 		send_fdm()
 
@@ -257,7 +260,8 @@ func actuate_servo(id, percentage):
 		7:
 			apply_thrust($t8, force)
 		14:
-			$Camera3D.rotation_degrees.x = -45 + 120 * percentage
+			# ArduSub's servo range, 1100-1900 us, spans the ±45 degrees its SITL mount parameters give the tilt
+			camera_tilt = clamp((percentage - 0.5) / 0.4, -1, 1) * 45
 		12:
 			percentage -= 0.1
 			percentage = max(0, percentage)
@@ -366,9 +370,9 @@ func process_keys():
 		self.apply_torque(self.transform.basis * Vector3(0, -THRUST, 0))
 
 	if Input.is_action_pressed("camera_up"):
-		$Camera3D.rotation_degrees.x = min($Camera3D.rotation_degrees.x + 0.5, 45)
+		camera_tilt = min(camera_tilt + 0.5, 45)
 	elif Input.is_action_pressed("camera_down"):
-		$Camera3D.rotation_degrees.x = 	max($Camera3D.rotation_degrees.x - 0.5, -45)
+		camera_tilt = max(camera_tilt - 0.5, -45)
 
 	if Input.is_action_pressed("gripper_open"):
 		ljoint.open()
