@@ -18,6 +18,7 @@ sdfgi_read_sky_light = false
 sdfgi_cascades = 2
 sdfgi_min_cell_size = 0.5
 glow_intensity = 2.28
+fog_enabled = true
 fog_light_color = Color(0.101961, 0.568627, 0.705882, 1)
 fog_density = 0.124
 fog_height = 0.3
