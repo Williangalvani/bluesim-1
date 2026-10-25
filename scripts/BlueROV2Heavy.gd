@@ -203,6 +203,7 @@ func _ready():
 		print("pointing camera to rov...")
 		$Camera3D.set_current(true)
 	set_spotlights_energy($light1.light_energy)
+	$"bluerov cleaned decimated2/GPUParticles3D2".material_override.set_shader_parameter("surface_altitude", Globals.surface_altitude)
 	_initial_position = get_global_transform().origin
 	print("setting phyisics process...")
 	set_physics_process(true)

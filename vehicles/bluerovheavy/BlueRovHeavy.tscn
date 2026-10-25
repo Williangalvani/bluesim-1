@@ -119,10 +119,13 @@ uniform vec3 uv1_scale;
 uniform vec3 uv1_offset;
 uniform vec3 uv2_scale;
 uniform vec3 uv2_offset;
+uniform float surface_altitude;
+varying float world_y;
 
 
 void vertex() {
 	UV=UV*uv1_scale.xy+uv1_offset.xy;
+	world_y = MODEL_MATRIX[3].y;
 	mat4 mat_world = mat4(normalize(INV_VIEW_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]) ,normalize(INV_VIEW_MATRIX[2]), MODEL_MATRIX[3]);
 	mat_world = mat_world * mat4(vec4(cos(INSTANCE_CUSTOM.x), -sin(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(sin(INSTANCE_CUSTOM.x), cos(INSTANCE_CUSTOM.x), 0.0, 0.0), vec4(0.0, 0.0, 1.0, 0.0), vec4(0.0, 0.0, 0.0, 1.0));
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat_world;
@@ -146,6 +149,10 @@ void vertex() {
 
 
 void fragment() {
+	// matter suspended in the water, so none in the air or seen from it
+	if (world_y > surface_altitude || INV_VIEW_MATRIX[3].y > surface_altitude) {
+		discard;
+	}
 	vec2 base_uv = UV;
 	vec4 albedo_tex = texture(texture_albedo,base_uv);
 	albedo_tex *= COLOR;
