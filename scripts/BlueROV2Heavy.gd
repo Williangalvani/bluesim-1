@@ -285,7 +285,8 @@ func actuate_servo(id, percentage):
 		7:
 			apply_thrust($t8, force)
 		14:
-			$Camera3D.rotation_degrees.x = -45 + 120 * percentage
+			# ArduSub's servo range, 1100-1900 us, spans the ±45 degrees its SITL mount parameters give the tilt
+			$Camera3D.rotation_degrees.x = clamp((percentage - 0.5) / 0.4, -1, 1) * 45
 		12:
 			percentage -= 0.1
 			percentage = max(0, percentage)
