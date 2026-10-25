@@ -27,7 +27,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 
 // For this shader min. GODOT 3.1.1 is required, because 3.1 has a depth buffer bug!
 shader_type 	spatial;
-render_mode 	cull_back,diffuse_burley,specular_disabled, blend_mix;
+render_mode 	cull_disabled,diffuse_burley,specular_disabled, blend_mix;
 
 
 // Wave settings:
@@ -56,6 +56,7 @@ uniform float	alpha_factor 	 = 1.0;
 uniform vec4 	ambient_color : source_color;						// Color for deep places in the water, medium to dark blue
 uniform vec4 	color_shallow : source_color;						// Color for lower places in the water, bright blue - green
 uniform vec4 	color_deep : source_color;						// Color for lower places in the water, bright blue - green
+uniform vec4 	color_sky : source_color = vec4(0.55, 0.72, 0.85, 1.0);	// Reflected sky, seen from above the water
 
 // Projector for the water caustics:
 uniform mat4	projector;										// Projector matrix, mostly the matric of the sun / directlight
@@ -141,14 +142,23 @@ void fragment()
 	
 		// Set all values:
 	vec3 world_view = (INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz;
-	float transparency_map = 1.0 - step(0.25, pow(max(0.0, dot(ref_normalmap, world_view)), 2.0));
-	ALBEDO = color_deep.rgb;
-	// Blend the deep_color with the original color based on brightness
-	EMISSION = mix(color_deep.rgb, color_shallow.rgb * (1.0 - transparency_map), (1.0 - transparency_map));
-	METALLIC = 1.0;
-	ROUGHNESS = 0.9;
-	SPECULAR = 0.0; // + depth_blend_pow * 0.4;
-	NORMAL_MAP = normalmap;
-	NORMAL_MAP_DEPTH = 1.25;
-	ALPHA = clamp(alpha_factor + 1.0 - transparency_map, 0.3, 1.0);
+	if (FRONT_FACING) {
+		float transparency_map = 1.0 - step(0.25, pow(max(0.0, dot(ref_normalmap, world_view)), 2.0));
+		ALBEDO = color_deep.rgb;
+		// Blend the deep_color with the original color based on brightness
+		EMISSION = mix(color_deep.rgb, color_shallow.rgb * (1.0 - transparency_map), (1.0 - transparency_map));
+		METALLIC = 1.0;
+		ROUGHNESS = 0.9;
+		SPECULAR = 0.0; // + depth_blend_pow * 0.4;
+		NORMAL_MAP = normalmap;
+		NORMAL_MAP_DEPTH = 1.25;
+		ALPHA = clamp(alpha_factor + 1.0 - transparency_map, 0.3, 1.0);
+	} else {
+		// seen from above, the plane faces away: the water's colour under the sky's reflection, which takes over at
+		// grazing angles, rippled by the same normal maps
+		float reflection = 0.25 + 0.75 * pow(1.0 - abs(dot(ref_normalmap, world_view)), 3.0);
+		ALBEDO = vec3(0.0);
+		EMISSION = mix(color_deep.rgb * 0.6, color_sky.rgb, reflection) * (0.8 + 0.4 * normalmap.g);
+		ALPHA = mix(0.9, 1.0, reflection);
+	}
 }
