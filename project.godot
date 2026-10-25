@@ -196,7 +196,7 @@ help={
 [physics]
 
 common/physics_ticks_per_second=100
-common/max_physics_steps_per_frame=2
+common/max_physics_steps_per_frame=8
 3d/physics_engine="Jolt Physics"
 3d/solver/contact_max_allowed_penetration=0.001
 3d/solver/default_contact_bias=0.99
