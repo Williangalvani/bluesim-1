@@ -47,6 +47,36 @@ If there is not SITL instance attached, these keys can be used to control the RO
 
  `sim_vehicle.py -j6 -L RATBeach -v ArduSub -f vectored_6dof --model JSON --out=udpout:0.0.0.0:14550`
 
+# Web build for Cockpit
+
+[Cockpit](https://github.com/bluerobotics/cockpit) can run ArduSub in the browser with the web build as its physics,
+shown in its Simulator widget. The two talk over the `cockpit-sitl-json` BroadcastChannel, so the build has to be
+served from the same origin as Cockpit, under `bluesim/`. Cockpit's README covers the ArduSub side.
+
+Export it with Godot 4.7 and its Web export templates installed:
+
+```bash
+godot4.7 --headless --path . --export-release Web export/web/index.html
+```
+
+The web build boots straight into a level, `?level=NAME` picking `levels/NAME.pck` (`reef` when not given).
+
+Then render the level's map tiles, which Cockpit shows on its map widgets. This runs the export just made in headless
+Chrome (set `CHROME` to use another binary) and needs Node.js 18.3 or later:
+
+```bash
+node tools/render_map_tiles.mjs --level reef --lat 33.810313 --lon -118.393867
+```
+
+`--lat` and `--lon` must match the `home` of Cockpit's SITL connection. The tiles are written to
+`export/web/tiles/<level>/{z}/{x}/{y}.jpg`, served beside the build as an XYZ URL, with a ZIP of them in
+`export/map-tiles/<level>.zip` for Cockpit's custom tile provider import. A failed run leaves the previous tiles in
+place. Finally, copy the export into Cockpit:
+
+```bash
+rsync -a --delete export/web/ <cockpit>/public/bluesim/
+```
+
 # External Levels
 
 External levels can be loaded by placing a .pck file in the "levels" folder at the same level as the simulator executable (the folder is created at first run if it does not exist).
