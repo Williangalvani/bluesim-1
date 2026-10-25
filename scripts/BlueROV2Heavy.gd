@@ -209,6 +209,7 @@ func _ready():
 	for thruster in [$t5, $t6]:
 		thruster_bubbles.append(ThrusterBubbles.new(thruster, BUBBLES_DIRECTION))
 		add_child(thruster_bubbles[-1])
+	$"bluerov cleaned decimated2/GPUParticles3D2".material_override.set_shader_parameter("surface_altitude", Globals.surface_altitude)
 	_initial_position = get_global_transform().origin
 	print("setting phyisics process...")
 	set_physics_process(true)
