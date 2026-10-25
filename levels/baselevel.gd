@@ -1,5 +1,8 @@
 extends Control
 
+# in metres; the water fog hides anything further away, and each shadow split redraws every multimesh whole
+const SUN_SHADOW_DISTANCE = 30
+
 # the web build boots straight into this scene, so the page URL picks the level the menu would; this runs before
 # the vehicle's _ready, which only connects to the autopilot once it is the active vehicle, and before Globals' _ready
 func _enter_tree():
@@ -16,4 +19,8 @@ func _ready():
 	var environment = Node3D.new()
 	environment.set_script(preload("res://scripts/environment.gd"))
 	add_child(environment)
-	add_child(load(Globals.active_level).instantiate())
+	var level = load(Globals.active_level).instantiate()
+	for sun in level.find_children("*", "DirectionalLight3D", true, false):
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+		sun.directional_shadow_max_distance = min(sun.directional_shadow_max_distance, SUN_SHADOW_DISTANCE)
+	add_child(level)
