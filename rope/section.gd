@@ -12,6 +12,8 @@ const NORMAL_CD = 1.2
 const AXIAL_CF = 0.01
 const NORMAL_K = 0.5 * WATER_DENSITY * NORMAL_CD * DIAMETER * LENGTH
 const AXIAL_K = 0.5 * WATER_DENSITY * AXIAL_CF * PI * DIAMETER * LENGTH
+# buoyancy as a multiple of the section's weight: slightly positive, so slack tether drifts up off the bottom
+const BUOYANCY_RATIO = 1.1
 
 func _physics_process(delta):
 	var underwater = global_transform.origin.y < 3.6
@@ -26,6 +28,6 @@ func _physics_process(delta):
 		# drag can slow the section down but never push it backwards within one step
 		apply_central_force(drag.limit_length(mass * body_frame_speeds.length() / delta))
 
-	var under_surface = global_transform.origin.y < 3.53
+	var under_surface = global_transform.origin.y < Globals.surface_altitude
 	if under_surface:
-		apply_central_force(Vector3(0,0.02,0))
+		apply_central_force(-get_gravity() * mass * BUOYANCY_RATIO)
