@@ -9,6 +9,7 @@ BlueROV2 from, with a Blue Robotics Fathom Spool on the aft deck carrying the RO
 | `boat.tscn` | instanceable boat: `AnimatableBody3D` (group `boats`) + model + two box colliders + the `TetherAnchor` marker + the `Pilot` |
 | `pilot.glb` | the ROV pilot: 3017 triangles in two meshes, `PilotBody` (2897) and `PilotLaptop` (120), 14 flat materials. Built by `build_pilot.py` (`blender -b --python build_pilot.py -- pilot.glb`) |
 | `boat_float.gd` | floating: holds the waterline on `Globals.surface_altitude` and adds heave/pitch/roll |
+| `boat_anchor.gd` | ground tackle (`GroundTackle` child in `boat.tscn`): anchor on the seabed ahead of the bow, chain up to the bow roller, pins the boat's horizontal position |
 | `boat_demo.tscn` / `.gd` | the sea level (baselevel + reef pack) with a boat placed by the ROV; `-- --boat-shot=/path/prefix` saves screenshots |
 
 Materials: `boat_hull` (white gelcoat), `boat_blue` (bottom paint, sheer stripe, anodized spool parts),
@@ -121,3 +122,25 @@ Known level issue (not the boat's): in the reef pack, 146 of the 473 kelp strand
 is deep and stick out of the surface (up to 5.75 m, median 1.8 m), 18 of them within 12 m of the boat.
 From above the water they look like plants standing in the air. The fix belongs in the reef level build
 (clamp strand height to the local depth, or bend the top into a surface canopy).
+
+## Ground tackle (anchor and chain)
+
+`GroundTackle` (a `Node3D` child of the boat, script `boat_anchor.gd`) lays an anchor on the seabed and keeps the
+boat on it:
+
+- At start (deferred, after `boat_float.gd` has floated the boat) it casts a ray down ahead of the bow to find the
+  seabed (level colliders, the boat excluded; `max_depth` 60 m if nothing is hit) and puts the anchor
+  `scope` (3) x depth ahead of the bow. In baselevel / reef next to the ROV: 7.5 m deep, 22.5 m ahead.
+- Every physics tick after `boat_float.gd` (it is the parent, so it runs first) it sets the boat's x/z back to its
+  place relative to the anchor: heave, pitch and roll stay, horizontal drift is zero (the TetherAnchor moved 0.000 m
+  horizontally over 100 s; without the anchor it wobbles ~7 mm with pitch/roll).
+- `swing_degrees` (default 0) lets the boat yaw slowly round the anchor (`swing_period` 90 s), bow on the chain's
+  lead. Keep it at 1 degree or less with a tether out: the stern, ~30 m from the anchor, moves ~0.5 m per degree,
+  and 5 degrees (6.5 m of TetherAnchor travel) made the tether solve 7x costlier and peaked it at 184 N.
+- Drawing: the anchor is one procedural `ArrayMesh` (stockless anchor: shank, crown, two flukes, shackle and ring,
+  148 triangles, ~1 m, `anchor_scale`); the chain is one `MultiMeshInstance3D` of stretched low-poly torus links
+  (48 triangles, `link_length` 0.22 m, alternately turned 90 degrees) along a catenary from the bow roller
+  (`fairlead`, boat frame) that lies on the seabed for `chain_on_seabed` (30%) of the run: 113 links / ~5.4k
+  instanced triangles in one draw call at 7.5 m. Computed once (again every 6 ticks only while swinging). No rigid
+  bodies and no colliders: the ROV and the tether pass through it.
+- Remove the `GroundTackle` node (or `anchor=0` in the spool bench) for a free-floating boat.

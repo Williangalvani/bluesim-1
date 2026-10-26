@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://vehicles/boat/boat_float.gd" id="1_float"]
 [ext_resource type="PackedScene" path="res://vehicles/boat/boat.glb" id="2_model"]
 [ext_resource type="PackedScene" path="res://vehicles/boat/pilot.glb" id="3_pilot"]
+[ext_resource type="Script" path="res://vehicles/boat/boat_anchor.gd" id="4_anchor"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_hull"]
 size = Vector3(2.3, 1.1, 5.85)
@@ -29,3 +30,6 @@ gizmo_extents = 0.4
 
 [node name="Pilot" parent="." instance=ExtResource("3_pilot")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.45, 0.32, 1.55)
+
+[node name="GroundTackle" type="Node3D" parent="."]
+script = ExtResource("4_anchor")
