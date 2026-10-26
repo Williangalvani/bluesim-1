@@ -144,6 +144,10 @@ boat on it:
   148 triangles, ~1 m, `anchor_scale`); the chain is one `MultiMeshInstance3D` of stretched low-poly torus links
   (48 triangles, `link_length` 0.22 m, alternately turned 90 degrees) along a catenary from the bow roller
   (`fairlead`, boat frame) that lies on the seabed for `chain_on_seabed` (30%) of the run: 113 links / ~5.4k
-  instanced triangles in one draw call at 7.5 m. Computed once (again every 6 ticks only while swinging). No rigid
-  bodies and no colliders: the ROV and the tether pass through it.
+  instanced triangles in one draw call at 7.5 m. Computed once (again every 6 ticks only while swinging).
+- Collision (`chain_collision`, default on): no rigid bodies, but one static `StaticBody3D` `ChainCollider` on
+  layer 1 with `chain_capsules` (10) capsules, `chain_radius` 0.03 m, over equal arc-length slices of the chain from
+  the bow roller to the anchor, plus a `anchor_radius` 0.35 m sphere at the anchor. Placed with the chain (rebuilt
+  only while swinging). The tether rests on the chain and the ROV bumps into it; the kelp still has no collision,
+  so the chain passes through kelp.
 - Remove the `GroundTackle` node (or `anchor=0` in the spool bench) for a free-floating boat.

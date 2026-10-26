@@ -7,8 +7,9 @@ extends Node3D
 ## drift, so the TetherAnchor's topside end stays put. swing_degrees > 0 lets it yaw slowly round the anchor
 ## (the bow stays on the chain's lead), which moves the tether's end by about the boat length x the swing.
 ## Light for the web build: the anchor is one procedural mesh (148 triangles), the chain one MultiMesh of
-## low-poly links along a catenary that is computed once (it is redrawn only while swinging); no rigid bodies
-## and no colliders (the tether and the ROV don't touch it).
+## low-poly links along a catenary that is computed once (it is redrawn only while swinging). No rigid bodies,
+## but one static collider (layer 1): capsules along the chain and a sphere at the anchor, so the tether rests
+## on the chain and the ROV bumps into it.
 
 @export var scope := 3.0  ## horizontal distance to the anchor, in water depths
 @export var max_depth := 60.0  ## m; no seabed found within this: the anchor is laid this deep
@@ -19,6 +20,10 @@ extends Node3D
 @export var swing_degrees := 0.0  ## yaw swing round the anchor; 0 = the boat holds its heading too
 @export var swing_period := 90.0  ## s
 @export var anchor_scale := 1.0
+@export var chain_collision := true  ## static capsules along the chain and a sphere at the anchor
+@export var chain_capsules := 10
+@export var chain_radius := 0.03  ## m
+@export var anchor_radius := 0.35  ## m
 
 var anchor_point := Vector3.INF  ## where the anchor lies (world)
 var _boat: Node3D
@@ -26,6 +31,9 @@ var _base_offset := Vector3.ZERO  ## boat origin relative to the anchor, horizon
 var _base_basis: Basis
 var _chain: MultiMeshInstance3D
 var _anchor_mesh: MeshInstance3D
+var _collider: StaticBody3D
+var _capsules: Array[CollisionShape3D] = []
+var _anchor_shape: CollisionShape3D
 var _time := 0.0
 var _depth := 0.0
 
@@ -57,6 +65,8 @@ func _lay_anchor():
 	_base_basis = _boat.global_basis
 	_build_anchor_mesh()
 	_build_chain()
+	if chain_collision:
+		_build_collider()
 	_place()
 
 
@@ -67,6 +77,8 @@ func _seabed_depth(at: Vector3, surface: float) -> float:
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		if v is CollisionObject3D:
 			excl.append(v.get_rid())
+	if _collider:
+		excl.append(_collider.get_rid())
 	q.exclude = excl
 	var hit := space.intersect_ray(q)
 	return clampf(surface - hit.position.y, 1.0, max_depth) if not hit.is_empty() else max_depth
@@ -119,15 +131,9 @@ func _place():
 	var step: float = total / maxi(n, 1)
 	for i in range(n):
 		var s := (i + 0.5) * step
-		var pos: Vector3
-		var tan: Vector3
-		if s < lying:
-			pos = bot + hdir * s + Vector3.UP * 0.03
-			tan = hdir
-		else:
-			var x := a * asinh((s - lying) / a)  # arc length -> x on the catenary
-			pos = bot + hdir * (lying + x) + Vector3.UP * (a * (cosh(x / a) - 1.0) + 0.03)
-			tan = (hdir + Vector3.UP * sinh(x / a)).normalized()
+		var pos := _chain_at(s, bot, hdir, lying, a)
+		# slope dy/dx = sinh(x / a) = (s - lying) / a on the hanging part
+		var tan := hdir if s < lying else (hdir + Vector3.UP * ((s - lying) / a)).normalized()
 		var side := tan.cross(Vector3.UP)
 		side = side.normalized() if side.length() > 1e-3 else Vector3.RIGHT
 		var up := side.cross(tan)
@@ -136,6 +142,50 @@ func _place():
 	# the anchor lies on the seabed, its shank along the chain's lead
 	var y := hdir
 	_anchor_mesh.global_transform = Transform3D(Basis(Vector3.UP.cross(y).normalized(), Vector3.UP, -y).scaled(Vector3.ONE * anchor_scale), bot)
+	if _collider:
+		# capsules over equal arc-length slices, local Y along each slice's chord (this node is at the world origin)
+		var nc := _capsules.size()
+		for i in range(nc):
+			var p0 := _chain_at(total * i / nc, bot, hdir, lying, a)
+			var p1 := _chain_at(total * (i + 1) / nc, bot, hdir, lying, a)
+			var cy := p1 - p0
+			var l := cy.length()
+			cy = cy / l if l > 1e-4 else Vector3.UP
+			var cx := cy.cross(Vector3.UP)
+			cx = cx.normalized() if cx.length() > 1e-3 else Vector3.RIGHT
+			var cs := _capsules[i]
+			(cs.shape as CapsuleShape3D).height = l + 2.0 * chain_radius
+			cs.transform = Transform3D(Basis(cx, cy, cx.cross(cy)), 0.5 * (p0 + p1))
+		# the sphere round the shank and crown, half sunk in the seabed
+		_anchor_shape.position = bot + hdir * (0.45 * anchor_scale) + Vector3.UP * (anchor_radius * 0.5)
+
+
+func _chain_at(s: float, bot: Vector3, hdir: Vector3, lying: float, a: float) -> Vector3:
+	# arc length s from the anchor -> point on the chain (lying on the seabed, then the catenary)
+	if s < lying:
+		return bot + hdir * s + Vector3.UP * 0.03
+	var x := a * asinh((s - lying) / a)
+	return bot + hdir * (lying + x) + Vector3.UP * (a * (cosh(x / a) - 1.0) + 0.03)
+
+
+func _build_collider():
+	_collider = StaticBody3D.new()
+	_collider.name = "ChainCollider"
+	_collider.collision_layer = 1
+	_collider.collision_mask = 0  # static: it only needs to be hit
+	for i in range(maxi(chain_capsules, 1)):
+		var cap := CapsuleShape3D.new()
+		cap.radius = chain_radius
+		var cs := CollisionShape3D.new()
+		cs.shape = cap
+		_collider.add_child(cs)
+		_capsules.append(cs)
+	var sph := SphereShape3D.new()
+	sph.radius = anchor_radius
+	_anchor_shape = CollisionShape3D.new()
+	_anchor_shape.shape = sph
+	_collider.add_child(_anchor_shape)
+	add_child(_collider)
 
 
 func _metal(c: Color) -> StandardMaterial3D:
