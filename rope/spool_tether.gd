@@ -20,6 +20,8 @@ extends Node3D
 # the attachment; the vehicle gets the reaction (capped at rov_max_force) at the contact, so it can push the cable.
 # Its gripper's claws (rigid bodies jointed to it) do the same where they are moving to, all along the cable, with a
 # contact radius small enough for the cable to sit between the jaws; each claw gets its own reaction.
+# Closed round the cable, the jaws hold it (grip): the particle at the jaw point is moved with the vehicle like the
+# attachment, the vehicle feels the pull on both sides of it there, and above grip_slip_force the cable slips out.
 # The pull of the first segment is applied to the vehicle at the attachment point. It is drawn as a Catmull-Rom
 # tube, subdivided only where the cable bends and is near the camera.
 
@@ -93,6 +95,15 @@ const G = 9.8
 @export var claw_contact_radius := 0.012  # m: the cable's radius and a skin, so it fits between the jaws
 @export var claw_friction := 0.3
 @export var claw_max_force := 40.0  # N, cap on the cable's push on each claw in one tick
+@export_group("Grip")
+@export var grip := true  # jaws closed round the cable hold it: the particle at the jaw point is pinned there
+@export var grip_radius := 0.05  # m, how near the jaw point the cable must be as they close
+@export var grip_window := 0.5  # s after closing in which it is still taken (later it can only be outside them)
+@export var grip_slip_force := 50.0  # N the cable may pull on the jaws, for grip_slip_ticks, before it slips out
+@export var grip_slip_ticks := 6
+@export var grip_smoothing := 0.3  # weight of each tick in the moving average of the pull on the jaws
+@export var grip_min_piece := 0.03  # m, the pieces either side of the held particle (the least a split there leaves)
+@export var jaw_point := Vector3(-0.02, -0.25, 0.53)  # in the vehicle's frame; a JawPoint marker on it wins
 @export_group("Drawing")
 @export var render_subdivisions := 4  # spline points per bent segment near the camera, straight or far ones get 1
 @export var bend_subdivide_deg := 6.0
@@ -204,6 +215,19 @@ var _lg_tick_events := PackedInt32Array()  # index of each change so far this ti
 var _lg_row := []
 var _lg_dv := 0.0
 var _lg_render := 0.0
+var jaw_local := Vector3.ZERO
+var grip_joints := []  # the claws' joints that tell is_closed() (ljoint.gd, rjoint.gd)
+var grip_i := -1  # the particle the jaws hold, -1: none
+var gripping := false
+var grip_force := Vector3.ZERO  # N the cable pulls on the jaws (moving average), applied to the vehicle there
+var grip_err := 0.0  # m from the held particle to the jaw point where the vehicle got to, measured the next tick
+var grip_snap := 0.0  # m the particle was moved onto the jaw point when taken
+var grips := 0  # totals, for the bench
+var slips := 0
+var releases := 0
+var grip_usec := 0
+var _grip_over := 0  # ticks the pull has been over grip_slip_force
+var _closed_ticks := 0  # since the jaws closed; -1 after a slip, until they open
 
 
 func _ready():
@@ -218,6 +242,8 @@ func _ready():
 	attach_local = rov.to_local(global_position)
 	_read_rov_shapes()
 	_find_claws()
+	var jp := rov.get_node_or_null("JawPoint") as Node3D
+	jaw_local = rov.to_local(jp.global_position) if jp else jaw_point
 	_find_anchor()
 	_brake_lim = brake_tension
 	_bend_min = cos(deg_to_rad(clamp(max_bend_deg, 0.0, 180.0)) / 2)
@@ -369,7 +395,8 @@ func _mass_at(i: int):
 	var l: float = 0.5 * ((rest[i - 1] if i > 0 else 0.0) + (rest[i] if i < n else 0.0))
 	var displaced := WATER_DENSITY * area * l
 	var cable := displaced / buoyancy_ratio
-	inv_m[i] = 0.0 if i == 0 or i == n else 1.0 / (cable + displaced)  # plus the water it carries sideways (added mass)
+	# (plus the water it carries sideways, added mass); the ends and the particle in the jaws are moved, not solved
+	inv_m[i] = 0.0 if i == 0 or i == n or i == grip_i else 1.0 / (cable + displaced)
 	weight[i] = cable * G
 	lift[i] = (displaced - cable) * G
 	kn[i] = 0.5 * WATER_DENSITY * normal_cd * diameter * l
@@ -399,6 +426,8 @@ func _physics_process(delta):
 		_query_contacts()
 		if segment_collide:
 			_query_segments()
+	if grip or gripping:
+		_grip_tick()
 	var t1 = Time.get_ticks_usec()
 	_solve(delta)
 	if topology_log:
@@ -413,9 +442,106 @@ func _physics_process(delta):
 	rov.apply_force(force, attach_point() - rov.global_position)
 	if rov_force != Vector3.ZERO:
 		rov.apply_force(rov_force, _rov_point - rov.global_position)
+	if gripping:
+		rov.apply_force(grip_force, rov.global_transform * jaw_local - rov.global_position)
 	for c in range(claw_force.size()):
 		if claw_force[c] != Vector3.ZERO:
 			claws[c].apply_force(claw_force[c], _claw_point[c] - claws[c].global_position)
+
+
+func _grip_tick():
+	# the jaws let go when they open (or the cable slips out), and take the cable when they close round it
+	var t0 := Time.get_ticks_usec()
+	var closed := grip and not grip_joints.is_empty()
+	for j in grip_joints:
+		closed = closed and j.is_closed()
+	var jw: Vector3 = rov.global_transform * jaw_local
+	if gripping:
+		grip_err = x[grip_i].distance_to(jw)
+		if not closed:
+			releases += 1
+			_grip_release()
+		elif _grip_over >= grip_slip_ticks:
+			slips += 1
+			_grip_release()
+			_closed_ticks = -1
+	if not closed:
+		_closed_ticks = 0
+	elif _closed_ticks >= 0:
+		_closed_ticks += 1
+		if not gripping and _closed_ticks <= grip_window * Engine.physics_ticks_per_second:
+			_grip_engage(jw)
+	if gripping:
+		for k in range(grip_i - 1, grip_i + 2):
+			far_ticks[k] = 0  # near a solid: no merging there, and bends next to it are split fine
+	grip_usec = Time.get_ticks_usec() - t0
+
+
+func _grip_engage(jw: Vector3):
+	# the cable's point nearest the jaw point, off the attachment's and the spool's segments: an end particle if one is
+	# there, else a new one; it becomes kinematic, moved with the jaws (never particle 1 or the spool's last)
+	var n := rest.size()
+	var best := grip_radius
+	var bj := -1
+	var bt := 0.0
+	for j in range(1, n - 1):
+		var d: Vector3 = x[j + 1] - x[j]
+		var t: float = clamp((jw - x[j]).dot(d) / maxf(d.length_squared(), 1e-12), 0.0, 1.0)
+		var dist: float = (x[j] + d * t).distance_to(jw)
+		if dist < best:
+			best = dist
+			bj = j
+			bt = t
+	if bj < 0:
+		return
+	var at: Vector3 = x[bj].lerp(x[bj + 1], bt)
+	var r: float = rest[bj]
+	var gi := -1
+	if at.distance_to(x[bj]) < 0.03 and bj >= 2:
+		gi = bj
+	elif at.distance_to(x[bj + 1]) < 0.03 and bj + 1 <= n - 2:
+		gi = bj + 1
+	elif r >= 2.0 * grip_min_piece:
+		var t: float = clamp(bt, grip_min_piece / r, 1.0 - grip_min_piece / r)
+		_insert(bj + 1, x[bj].lerp(x[bj + 1], t), v[bj].lerp(v[bj + 1], t), r * t, r * (1.0 - t))
+		splits += 1
+		gi = bj + 1
+	elif bt < 0.5 and bj >= 2:
+		gi = bj
+	elif bj + 1 <= n - 2:
+		gi = bj + 1
+	if gi < 0:
+		return
+	grip_i = gi
+	gripping = true
+	grip_snap = x[gi].distance_to(jw)
+	x[gi] = jw
+	p[gi] = jw
+	c_has[gi] = 0
+	_mass_at(gi)
+	# its segments are left to their other ends by the claws (which can't move it): keep them short, so the cable
+	# leaves the jaws from particles they do push
+	for k in [gi, gi - 1]:
+		var rk: float = rest[k]
+		if rk >= 2.0 * grip_min_piece:
+			var f: float = grip_min_piece / rk if k == grip_i else 1.0 - grip_min_piece / rk
+			_insert(k + 1, x[k].lerp(x[k + 1], f), v[k].lerp(v[k + 1], f), rk * f, rk * (1.0 - f))
+			splits += 1
+	grip_err = 0.0
+	grip_force = Vector3.ZERO
+	_grip_over = 0
+	grips += 1
+
+
+func _grip_release():
+	var gi := grip_i
+	grip_i = -1
+	gripping = false
+	grip_force = Vector3.ZERO
+	_grip_over = 0
+	_mass_at(gi)
+	for k in range(gi - 1, gi + 2):
+		far_ticks[k] = 0
 
 
 func _query_contacts():
@@ -604,6 +730,8 @@ func _find_claws():
 		var claw = b if a == rov else (a if b == rov else null)
 		if not (claw is RigidBody3D) or claws.has(claw):
 			continue
+		if j.has_method("is_closed"):
+			grip_joints.append(j)
 		for entry in _read_shapes(claw):
 			_cs_claw.append(claws.size())
 			_cs_xf.append(entry[1])
@@ -808,10 +936,12 @@ func _solve(dt):
 			var rb: float = rest[j + 1]
 			var th: float = min(_bend_cap, 0.5 * (ra + rb) * inv_r)
 			bmin[j] = sqrt(max(ra * ra + rb * rb + 2.0 * ra * rb * cos(th), 0.0))
+	# the particle in the jaws is moved with them: no contact moves it, and its segments are left to their other ends
+	var gi := grip_i
 	var contact_list := PackedInt32Array()
 	if contacts > 0:
 		for i in range(1, n):
-			if c_has[i]:
+			if c_has[i] and i != gi:
 				contact_list.append(i)
 	var seg_list := PackedInt32Array()
 	if seg_contacts > 0 and segment_collide:
@@ -835,10 +965,10 @@ func _solve(dt):
 		for i in range(1, n):
 			var a0 := along
 			along += rest[i - 1]
-			if along >= rov_skip_length and x[i].distance_to(rov_xf.origin) < reach:
+			if along >= rov_skip_length and x[i].distance_to(rov_xf.origin) < reach and i != gi:
 				rov_p.append(i)
 			# a segment whose near end is past the skip length and that passes within reach
-			if a0 >= rov_skip_length and i - 1 < n - 1:
+			if a0 >= rov_skip_length and i - 1 < n - 1 and i != gi and i - 1 != gi:
 				var sa: Vector3 = x[i - 1]
 				var sd: Vector3 = x[i] - sa
 				var tt: float = clamp((rov_xf.origin - sa).dot(sd) / max(sd.length_squared(), 1e-10), 0.0, 1.0)
@@ -873,7 +1003,7 @@ func _solve(dt):
 		for j in range(1, n - 1):
 			var sd: Vector3 = x[j + 1] - x[j]
 			var tt: float = clamp((mid - x[j]).dot(sd) / max(sd.length_squared(), 1e-10), 0.0, 1.0)
-			if (x[j] + sd * tt).distance_to(mid) < reach:
+			if (x[j] + sd * tt).distance_to(mid) < reach and j != gi and j + 1 != gi:
 				cl_s.append(j)
 	var cl_pn := PackedFloat32Array()
 	cl_pn.resize(cl_s.size() * _cs_claw.size())
@@ -888,6 +1018,9 @@ func _solve(dt):
 	var tension_sum := 0.0
 	var spool_sum := 0.0
 	var paid := 0.0
+	var jw: Vector3 = rov_xf * jaw_local
+	var jw_vel: Vector3 = rov_v + rov_w.cross(jw - rov_xf.origin)
+	var grip_sum := Vector3.ZERO
 	x[n] = anchor
 	for s in range(substeps):
 		x[0] = a + a_vel * h * s
@@ -913,6 +1046,10 @@ func _solve(dt):
 					vi = vn + vt
 			v[i] = vi
 			p[i] = xi + vi * h
+		if gi >= 0:
+			# where the jaws will be at the substep's end, as for the attachment
+			x[gi] = jw + jw_vel * h * s
+			p[gi] = jw + jw_vel * h * (s + 1)
 		lambdas.fill(0.0)
 		if bend:
 			blambdas.fill(0.0)
@@ -1239,6 +1376,10 @@ func _solve(dt):
 		_brake_lim = brake_tension + payout_damping * max(paid, 0.0) / (h * (s + 1)) + max_force * stop * stop
 		tension_sum += -lambdas[0] / h2
 		spool_sum += -lambdas[n - 1] / h2
+		if gi >= 0:
+			# the jaws feel the tension on each side of the particle they hold, along its two segments
+			grip_sum -= ((p[gi - 1] - p[gi]).normalized() * lambdas[gi - 1]
+					+ (p[gi + 1] - p[gi]).normalized() * lambdas[gi]) / h2
 		for i in range(1, n):
 			v[i] = (p[i] - x[i]) / h
 			x[i] = p[i]
@@ -1259,6 +1400,9 @@ func _solve(dt):
 		_update_masses()
 	tension = tension_sum / substeps
 	spool_tension = spool_sum / substeps
+	if gi >= 0:
+		grip_force = grip_force.lerp(grip_sum / substeps, grip_smoothing).limit_length(max_force)
+		_grip_over = _grip_over + 1 if grip_force.length() > grip_slip_force else 0
 	force = ((x[1] - x[0]).normalized() * tension).limit_length(max_force)
 
 
@@ -1281,6 +1425,8 @@ func _payout_topology():
 
 func _insert(i: int, pos: Vector3, vel: Vector3, rest_a: float, rest_b: float, kind := ""):
 	# a new particle i on segment i - 1, which becomes rest_a (i - 1 to i) and rest_b (i to i + 1): length is kept
+	if grip_i >= i:
+		grip_i += 1
 	if topology_log:
 		_lg_before(i, kind, true, pos, rest_a, rest_b)
 	x.insert(i, pos)
@@ -1314,6 +1460,11 @@ func _insert(i: int, pos: Vector3, vel: Vector3, rest_a: float, rest_b: float, k
 
 func _remove(i: int, kind := ""):
 	# particle i goes, segments i - 1 and i become one (length kept); its momentum goes to its neighbours
+	if i == grip_i:
+		releases += 1  # (only reeled in onto the spool: merges keep clear of it)
+		_grip_release()
+	elif grip_i > i:
+		grip_i -= 1
 	if topology_log:
 		_lg_before(i, kind, false, x[i], rest[i - 1], rest[i])
 	var mi := 1.0 / inv_m[i] if inv_m[i] > 0 else 0.0
@@ -1450,7 +1601,8 @@ func _adapt():
 				and not s_has[i - 1] and not s_has[i] and rest[i - 1] + rest[i] <= max_segment \
 				and maxf(rest[i - 1], rest[i]) <= 2.0 * minf(rest[i - 1], rest[i]) \
 				and (i == 1 or far_ticks[i - 1] >= merge_delay) and far_ticks[i + 1] >= merge_delay \
-				and not _bent(i - 1, cos_keep) and not _bent(i + 1, cos_keep) and not _stretched(i - 2, i + 1):
+				and not _bent(i - 1, cos_keep) and not _bent(i + 1, cos_keep) and not _stretched(i - 2, i + 1) \
+				and (grip_i < 0 or absi(i - grip_i) > 1):
 			# straight and clear of solids: one particle fewer. Only pieces about as long as each other (so no
 			# neighbour's mass more than doubles: graded pieces go back up by doubling) and nothing stretched next to
 			# it, or the new masses let the stretch go in one tick
