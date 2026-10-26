@@ -26,6 +26,10 @@ extends Node
 #   leaves the span as laid. Logs (claw_series, per tick) and sums up the cable's centreline inside the claws, the
 #   claws' reactions and spin, the vehicle's jitter, and how far the cable is from the jaw centre (dragged or slipped).
 #   claw_collide=0 compares the old one-way claw contact.
+# scenario=clawgrab: the same, with the jaws holding the cable (the tether's grip; grip=0 to compare): it takes the
+#   span, holds, drags it 2 m astern, holds still for `still` s, lets go and backs off. Logs and sums up the pull on
+#   the jaws, how far the held particle is from the jaw point, slips and releases. slip=1 pulls hard while dragging (the
+#   spool brakes at slip_brake N and the vehicle backs drag=4 m with up to slip_max N), so the cable should slip out.
 #   noshot=1 takes no screenshots (for a video recording at a fixed camera).
 #   pen_every=N (frames) measures how much of the tether is inside solids: a ray each way along every segment.
 #   With ret=S it then drives back towards the spool at half thrust for S s (try with reel=1).
@@ -48,7 +52,9 @@ const KEYS = {"max": "max_length", "len0": "initial_length", "sp": "spacing", "f
 	"rovcol": "rov_collide", "rovskip": "rov_skip_length", "rovfric": "rov_friction", "rovmax": "rov_max_force",
 	"buoy": "buoyancy_ratio", "bendr": "min_bend_radius",
 	"bendsp": "bend_spacing", "claw_collide": "claw_collide", "clawr": "claw_contact_radius", "clawfric": "claw_friction",
-	"clawmax": "claw_max_force", "topolog": "topology_log"}
+	"clawmax": "claw_max_force", "topolog": "topology_log",
+	"grip": "grip", "grip_r": "grip_radius", "grip_slip": "grip_slip_force",
+	"grip_ema": "grip_smoothing", "grip_piece": "grip_min_piece"}
 const JAW = Vector3(-0.02, -0.25, 0.53)  # the gripper's jaw centre, in the vehicle's frame
 
 var params := {}
@@ -127,6 +133,7 @@ var rov_acc_free := 0.0
 var rov_spin_peak := 0.0
 var rov_speed_peak := 0.0
 var rov_contact_ticks := 0  # slalom: [fwd, side_from, side_to, thickness]
+var claw_run := false  # clawpinch or clawgrab
 var joints := []  # clawpinch: the claws' hinge joints (ljoint.gd, rjoint.gd)
 var grab_c := Vector3.INF  # the span point the jaw centre goes for
 var grab_h := Vector3.ZERO  # the heading it is taken with (across the span)
@@ -136,6 +143,8 @@ var claw_log := []  # per tick from the stand-off: see _claw_tick
 var _drag0 := Vector3.INF
 var _jaw0 := Vector3.INF
 var drag := {"slip_at": -1.0}
+var grip_ev := {"engaged_at": -1.0, "engaged_in": "", "snap": -1.0, "released_at": -1.0, "slipped_at": -1.0}
+var _was_gripping := false
 
 
 func _p(key, default):
@@ -147,6 +156,7 @@ func _ready():
 	process_physics_priority = -1000
 	secs = _p("secs", 400.0)
 	scenario = _p("scenario", "far")
+	claw_run = scenario in ["clawpinch", "clawgrab"]
 	depth = _p("depth", 3.0)
 	thrust = _p("thrust", 40.0)
 	rov = get_tree().get_first_node_in_group("vehicles")
@@ -205,7 +215,7 @@ func _ready():
 		focus.y = Globals.surface_altitude - depth
 		pillar = focus  # the top view centres on the span
 		pull_to = start + fwd0 * ((pa + pb) / 2.0) + side0 * 30.0
-	elif scenario == "clawpinch":
+	elif claw_run:
 		for kv in [["boat", "0"], ["buoy", "1.0"], ["pr", "0.15"]]:
 			if not params.has(kv[0]):
 				params[kv[0]] = kv[1]
@@ -599,6 +609,11 @@ func _assist(jset: Vector3):
 	rov.apply_torque(Vector3.UP * clamp(25.0 * a - 20.0 * rov.angular_velocity.y, -15.0, 15.0))
 
 
+func _drag_dist() -> float:
+	# m the jaws back off with the cable (clawgrab: drag=M; further when pulling hard)
+	return _p("drag", 4.0 if _p("slip", 0) == 1 else 2.0) if scenario == "clawgrab" else 2.0
+
+
 func _cable_near(q: Vector3) -> Array:
 	# [distance, point] of the cable's centreline nearest q (not the attachment's segment)
 	var xs: PackedVector3Array = tether.x
@@ -614,7 +629,8 @@ func _cable_near(q: Vector3) -> Array:
 func _claw_tick():
 	# per tick: [t, state, centreline depth in a claw, its clearance (< 0 inside), claw contacts, then per claw its
 	# force (N) and spin relative to the vehicle (rad/s), per joint its angle, the cable's distance from the jaw centre,
-	# the vehicle's acceleration, solve us, claw us]
+	# the vehicle's acceleration, solve us, claw us; then the grip: held (0/1), its pull (N), the held particle's
+	# distance from the jaw point (m), grip us, and the vehicle's spin (rad/s)]
 	var pen_c: float = tether.claw_penetration()
 	var clr: float = tether.claw_clearance
 	var row = [snapped(t, 0.001), state, snapped(pen_c, 1e-4), snapped(clr, 1e-4) if is_finite(clr) else 9.0,
@@ -628,19 +644,35 @@ func _claw_tick():
 		row.append(snapped(jn.angle, 0.001))
 	row.append_array([snapped(_cable_near(rov.global_transform * JAW)[0], 1e-4), snapped(_acc_now, 0.01),
 		tether.solve_usec, tether.claw_usec])
+	var held: bool = tether.gripping
+	row.append_array([int(held), snapped(tether.grip_force.length(), 0.01) if held else 0.0,
+		snapped(tether.grip_err, 1e-6) if held and _was_gripping else -1.0, tether.grip_usec,
+		snapped(rov.angular_velocity.length(), 1e-4)])
+	if nan_at < 0 and held and not (tether.grip_force.is_finite() and tether.x[tether.grip_i].is_finite()):
+		nan_at = t
+	if held and not _was_gripping:
+		if grip_ev.engaged_at < 0:
+			grip_ev.merge({"engaged_at": t, "engaged_in": state, "snap": tether.grip_snap}, true)
+	elif _was_gripping and not held:
+		grip_ev["slipped_at" if tether.slips > 0 and grip_ev.slipped_at < 0 else "released_at"] = t
+	_was_gripping = held
 	claw_log.append(row)
 
 
 func _claw_summary() -> Dictionary:
 	# from claw_log, over the grab (approach on) and per state
 	var nc: int = tether.claws.size()
-	var out = {"claws": tether.claws.map(func(c): return str(c.name)), "drag": drag, "by_state": {}}
+	var out = {"claws": tether.claws.map(func(c): return str(c.name)), "drag": drag, "by_state": {},
+		"grip_events": grip_ev, "grips": tether.grips, "slips": tether.slips, "releases": tether.releases,
+		"nan_at": nan_at}
+	var g0: int = 9 + 2 * nc + joints.size()
 	var all = {}
 	for row in claw_log:
 		if row[1] == "standoff":
 			continue
 		for key in [row[1], "grab"]:
-			var s = all.get(key, {"pen": [], "clr": [], "cont": [], "gap": [], "acc": [], "solve": [], "claw_us": []})
+			var s = all.get(key, {"pen": [], "clr": [], "cont": [], "gap": [], "acc": [], "solve": [], "claw_us": [],
+				"gf": [], "df": [], "err": [], "gus": [], "spin": [], "last_f": -1.0})
 			s.pen.append(row[2])
 			s.clr.append(row[3])
 			s.cont.append(row[4])
@@ -648,6 +680,15 @@ func _claw_summary() -> Dictionary:
 			s.acc.append(row[6 + 2 * nc + joints.size()])
 			s.solve.append(row[7 + 2 * nc + joints.size()])
 			s.claw_us.append(row[8 + 2 * nc + joints.size()])
+			if row[g0] == 1:
+				s.gf.append(row[g0 + 1])
+				if s.last_f >= 0.0:
+					s.df.append(row[g0 + 1] - s.last_f)  # tick to tick
+				if row[g0 + 2] >= 0.0:
+					s.err.append(row[g0 + 2])
+				s.gus.append(row[g0 + 3])
+			s.last_f = row[g0 + 1] if row[g0] == 1 else -1.0
+			s.spin.append(row[g0 + 4])
 			for c in range(nc):
 				var fk = "f%d" % c
 				var wk = "w%d" % c
@@ -663,7 +704,9 @@ func _claw_summary() -> Dictionary:
 		var d = {"ticks": s.pen.size(), "pen": _stats(s.pen, 1e-5), "clear_min": s.clr.min(),
 			"contact_ticks": s.cont.filter(func(v): return v > 0).size(), "contacts_max": s.cont.max(),
 			"gap": _stats(s.gap, 1e-5), "rov_acc": _stats(s.acc, 1e-5), "solve_us": _stats(s.solve),
-			"claw_us": _stats(s.claw_us)}
+			"claw_us": _stats(s.claw_us), "grip_ticks": s.gf.size(), "grip_force": _stats(s.gf, 0.01),
+			"grip_df_std": snapped(_std(s.df), 0.001), "pin_err": _stats(s.err, 1e-6), "grip_us": _stats(s.gus),
+			"rov_spin": _stats(s.spin, 1e-4)}
 		for c in range(nc):
 			d["force_%s" % out.claws[c]] = _stats(s["f%d" % c], 0.01)
 			d["spin_%s" % out.claws[c]] = _stats(s["w%d" % c], 1e-4)
@@ -677,7 +720,7 @@ func _claw_summary() -> Dictionary:
 func _go(s: String):
 	state = s
 	state_t = 0.0
-	if scenario == "clawpinch" and tether:
+	if claw_run and tether:
 		var jw = rov.global_transform * JAW
 		print("SPOOLBENCH state %s t=%.2f jaw %s grab %s heading %s cable gap %.3f at %s spool %.2f N reel %s"
 			% [s, t, jw, grab_c, grab_h, _cable_near(jw)[0], _cable_near(jw)[1], tether.spool_tension, tether.get("reel_in")])
@@ -699,8 +742,8 @@ func _physics_process(delta):
 	match state:
 		"settle":
 			_hold_depth()
-			if t > 2.0 and (scenario != "clawpinch" or absf(Globals.surface_altitude - depth - rov.global_position.y) < 0.3):
-				_go("out" if scenario == "far" else ("route" if scenario == "clawpinch" else "loop"))
+			if t > 2.0 and (not claw_run or absf(Globals.surface_altitude - depth - rov.global_position.y) < 0.3):
+				_go("out" if scenario == "far" else ("route" if claw_run else "loop"))
 				if wp_depth.size():
 					depth = wp_depth[0]
 		"out":
@@ -756,7 +799,7 @@ func _physics_process(delta):
 					_finish()
 				if state_t > _p("hold", 90.0):
 					_finish()
-			elif scenario == "clawpinch":
+			elif claw_run:
 				# pull the cable taut round the post, then go and take the span
 				_steer(pull_to, thrust)
 				if state_t > _p("pull", 6.0):
@@ -837,9 +880,15 @@ func _physics_process(delta):
 				_shot("closed_close", "close")
 			elif state == "hold" and state_t > 5.0:
 				_go("back")
-		"back":
+		"back", "still":
 			# 2 m astern in 4 s with the jaws shut: is the cable dragged along, or does it slip out?
-			_assist(grab_c - grab_h * 2.0 * clamp(state_t / 4.0, 0.0, 1.0))
+			if scenario == "clawgrab" and state == "back" and state_t > 4.0:
+				state = "still"  # (state_t runs on)
+			if scenario == "clawgrab" and _p("slip", 0) == 1 and not drag.has("brake"):
+				drag["brake"] = _p("slip_brake", 100.0)
+				tether.brake_tension = drag.brake
+				params["assist_max"] = str(_p("slip_max", 150.0))
+			_assist(grab_c - grab_h * _drag_dist() * clamp(state_t / 4.0, 0.0, 1.0))
 			for jn in joints:
 				jn.close()
 			var near = _cable_near(rov.global_transform * JAW)
@@ -849,12 +898,13 @@ func _physics_process(delta):
 			drag["gap_max"] = max(drag.get("gap_max", 0.0), near[0])
 			if near[0] > 0.05 and drag.slip_at < 0:
 				drag.slip_at = t
-			if state_t > 3.5 and not shots_taken.has("backing"):
-				shots_taken.append("backing")
-				_shot("backing_jaw_side", "jaw_side")
-				_shot("backing_jaw_below", "jaw_below")
-				_shot("backing_chase", "chase")
-			if state_t > 5.0:
+			var shot = "dragging" if scenario == "clawgrab" else "backing"
+			if state_t > 3.5 and not shots_taken.has(shot):
+				shots_taken.append(shot)
+				_shot(shot + "_jaw_side", "jaw_side")
+				_shot(shot + "_jaw_below", "jaw_below")
+				_shot(shot + "_chase", "chase")
+			if state_t > 4.0 + (_p("still", 3.0) if scenario == "clawgrab" else 1.0):
 				drag["jaw_moved"] = _jaw0.distance_to(rov.global_transform * JAW)
 				drag["cable_moved"] = _drag0.distance_to(near[1])  # the cable's point next to the jaw centre
 				drag["gap_end"] = near[0]
@@ -863,7 +913,12 @@ func _physics_process(delta):
 			for jn in joints:
 				jn.open()
 			var k = clamp(state_t / 3.0, 0.0, 1.0) if state == "away" else 0.0
-			_assist(grab_c - grab_h * (2.0 + 1.5 * k))
+			_assist(grab_c - grab_h * (_drag_dist() + 1.5 * k))
+			if scenario == "clawgrab" and state == "release" and state_t > 1.2 and not shots_taken.has("released"):
+				shots_taken.append("released")
+				_shot("released_jaw_side", "jaw_side")
+				_shot("released_jaw_below", "jaw_below")
+				_shot("released_chase", "chase")
 			if state == "release" and state_t > 1.5:
 				_go("away")
 			elif state == "away" and state_t > 3.5 and not shots_taken.has("away"):
@@ -871,7 +926,7 @@ func _physics_process(delta):
 				_shot("away_chase", "chase")
 			if state == "away" and state_t > 4.0 and shots.is_empty() and shot_wait < 0:
 				_finish()
-	if scenario == "clawpinch" and state in ["settle", "route", "pull", "standoff", "approach", "aim"]:
+	if claw_run and state in ["settle", "route", "pull", "standoff", "approach", "aim"]:
 		for jn in joints:
 			jn.open()  # wide open (it starts part open)
 	if t >= secs and not done:
@@ -912,7 +967,7 @@ func _physics_process(delta):
 			if scenario in ["rovloop", "rovpress"]:
 				_shot("touch_chase", "chase")
 				_shot("touch_top", "course_top")
-	if scenario == "clawpinch" and "claw_force" in tether and not state in ["settle", "route", "pull"]:
+	if claw_run and "claw_force" in tether and not state in ["settle", "route", "pull"]:
 		_claw_tick()
 	var tens = tether.tension
 	if tens > peak_tension:
@@ -1177,6 +1232,18 @@ static func _write_csv(path: String, cols: Array, rows: Array):
 		f.store_line(",".join(row.map(func(e): return String.num(e, 6) if typeof(e) == TYPE_FLOAT else str(e))))
 
 
+static func _std(a: Array) -> float:
+	if a.size() < 2:
+		return 0.0
+	var m := 0.0
+	for e in a:
+		m += e / a.size()
+	var v := 0.0
+	for e in a:
+		v += (e - m) * (e - m) / (a.size() - 1)
+	return sqrt(v)
+
+
 static func _stats(a: Array, step := 0.1) -> Dictionary:
 	if a.is_empty():
 		return {}
@@ -1217,7 +1284,7 @@ func _finish():
 			"spin_peak": rov_spin_peak, "speed_peak": rov_speed_peak},
 		"waypoints_done": wp, "series": series, "stalled_at": stalled_at, "best_progress": _best_progress, "gates": gates,
 		"pen": pen, "pen_series": pen_series,
-		"claw": _claw_summary() if scenario == "clawpinch" and "claw_force" in tether else {},
+		"claw": _claw_summary() if claw_run and "claw_force" in tether else {},
 		"claw_series": claw_log,
 		"splits": tether.get("splits") if tether else 0, "merges": tether.get("merges") if tether else 0,
 	}
@@ -1242,8 +1309,8 @@ func _finish():
 					prev = null
 			result["pillar_touching"] = touching
 			result["pillar_wrap_deg"] = rad_to_deg(ang)
-	if scenario == "clawpinch":
-		print("SPOOLBENCH clawpinch " + JSON.stringify(result.claw))
+	if claw_run:
+		print("SPOOLBENCH %s %s" % [scenario, JSON.stringify(result.claw)])
 	if tether and tether.get("topology_log"):
 		var base: String = _p("topolog_out", "user://topolog")
 		_write_csv(base + ".events.csv", tether.TOPO_EVENT_COLS, tether.topo_events)
