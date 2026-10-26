@@ -23,10 +23,13 @@ func _enter_tree():
 func _ready():
 	var base = load("res://levels/baselevel.tscn").instantiate()
 	add_child(base)
-	boat = BOAT.instantiate()
-	boat.position = boat_position
-	boat.rotation_degrees.y = boat_yaw_degrees
-	base.get_node("ViewportCamera/SubViewport").add_child(boat)
+	# baselevel has its boat astern of the ROV already; a level without one gets it at boat_position
+	boat = base.get_node_or_null("ViewportCamera/SubViewport/Boat")
+	if boat == null:
+		boat = BOAT.instantiate()
+		boat.position = boat_position
+		boat.rotation_degrees.y = boat_yaw_degrees
+		base.get_node("ViewportCamera/SubViewport").add_child(boat)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--boat-shot="):
 			_screenshots(arg.trim_prefix("--boat-shot="))

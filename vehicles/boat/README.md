@@ -10,7 +10,10 @@ BlueROV2 from, with a Blue Robotics Fathom Spool on the aft deck carrying the RO
 | `pilot.glb` | the ROV pilot: 3017 triangles in two meshes, `PilotBody` (2897) and `PilotLaptop` (120), 14 flat materials. Built by `build_pilot.py` (`blender -b --python build_pilot.py -- pilot.glb`) |
 | `boat_float.gd` | floating: holds the waterline on `Globals.surface_altitude` and adds heave/pitch/roll |
 | `boat_anchor.gd` | ground tackle (`GroundTackle` child in `boat.tscn`): anchor on the seabed ahead of the bow, chain up to the bow roller, pins the boat's horizontal position |
-| `boat_demo.tscn` / `.gd` | the sea level (baselevel + reef pack) with a boat placed by the ROV; `-- --boat-shot=/path/prefix` saves screenshots |
+| `boat_demo.tscn` / `.gd` | the sea level (baselevel + reef pack) with its boat astern of the ROV; `-- --boat-shot=/path/prefix` saves screenshots |
+
+In the game, `levels/baselevel.tscn` has a `Boat` 5 m astern of where the ROV starts, so the spool tether pays out
+from its `TetherAnchor`; `baselevel.gd` drops it for the pool level and the tether benches, which place their own.
 
 Materials: `boat_hull` (white gelcoat), `boat_blue` (bottom paint, sheer stripe, anodized spool parts),
 `boat_deck` (grey non-skid pads, cushions), `boat_metal` (stainless), `boat_black` (outboard, rub rail,

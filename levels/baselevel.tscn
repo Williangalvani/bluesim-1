@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=17 format=3 uid="uid://clbt7xl26oubb"]
 
 [ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
 [ext_resource type="PackedScene" uid="uid://d0rv01klybh31" path="res://vehicles/bluerovheavy/BlueRovHeavy.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://vehicles/boat/boat.tscn" id="10_boat"]
 
 [sub_resource type="GDScript" id="1"]
 script/source = "# Licensed under the MIT License.
@@ -377,6 +378,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.41, 0)
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
+
+[node name="Boat" parent="ViewportCamera/SubViewport" instance=ExtResource("10_boat")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -8.06, 3.53, 0.6)
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(30, -2.62268e-06, -2.62268e-06, -2.62268e-06, -30, -1.04636e-14, -2.62268e-06, 2.39746e-13, -30, 0, 3.53, 0)
