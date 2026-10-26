@@ -7,7 +7,7 @@ var starting_angle = 0
 var kp = 4
 var base
 var claw
-var angle := 0.0  # rad from the scene's (closed) pose, measured every frame
+var angle := 0.0  # rad from the scene's (closed) pose, measured every physics tick
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	# Godot takes an impulse limit; the claw motors were tuned for 50 N*m of torque
@@ -16,9 +16,10 @@ func _ready():
 	claw = get_node(self.node_b)
 	starting_angle = base.transform.basis.x.signed_angle_to(claw.transform.basis.x,base.transform.basis.y)
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	# calculate the angle between node_a and node_b at every frame:
+# Every physics tick, not every frame: at several ticks a frame (or on the web) a per-frame loop drives the
+# motor with a stale target velocity for the frame's other ticks.
+func _physics_process(delta):
+	# calculate the angle between node_a and node_b at every tick:
 
 	angle = base.transform.basis.x.signed_angle_to(claw.transform.basis.x,base.transform.basis.y) - starting_angle
 	var output = kp* (targetAngle - angle)
