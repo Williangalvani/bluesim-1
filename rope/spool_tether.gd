@@ -1359,6 +1359,27 @@ func _remove(i: int, kind := ""):
 func _adapt():
 	var changes := 0
 	var n := rest.size()
+	if adaptive and not _rov_split.is_empty():
+		# touching the hull or a claw: split there (highest index first, so the others stay valid; before the
+		# splits below, as the indices are from the solve)
+		_rov_split.sort_custom(func(a, b): return a[0] > b[0])
+		var last := -1
+		for e in _rov_split:
+			var j: int = e[0]
+			if j == last or changes >= topology_changes_per_tick or x.size() >= max_total_particles or j >= n - 1:
+				continue
+			last = j
+			var piece: float = e[2] if e.size() > 2 else near_spacing  # (a claw gives its own)
+			var lo := piece / rest[j]
+			var t: float = clamp(e[1], lo, 1.0 - lo)
+			if rest[j] < 2.0 * piece:
+				continue
+			var r: float = rest[j]
+			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t),
+				"split_claw" if e.size() > 2 else "split_rov")
+			changes += 1
+			splits += 1
+			n += 1
 	if adaptive and seg_contacts > 0:
 		# near a solid: split the segment where it touches, so a particle (with the segment's contact plane) sits
 		# on the edge or corner and the tether bends there instead of cutting through
@@ -1387,26 +1408,6 @@ func _adapt():
 				j += 2
 			else:
 				j += 1
-	if adaptive and not _rov_split.is_empty():
-		# touching the hull: split there too (highest index first, so the others stay valid)
-		_rov_split.sort_custom(func(a, b): return a[0] > b[0])
-		var last := -1
-		for e in _rov_split:
-			var j: int = e[0]
-			if j == last or changes >= topology_changes_per_tick or x.size() >= max_total_particles or j >= n - 1:
-				continue
-			last = j
-			var piece: float = e[2] if e.size() > 2 else near_spacing  # (a claw gives its own)
-			var lo := piece / rest[j]
-			var t: float = clamp(e[1], lo, 1.0 - lo)
-			if rest[j] < 2.0 * piece:
-				continue
-			var r: float = rest[j]
-			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t),
-				"split_claw" if e.size() > 2 else "split_rov")
-			changes += 1
-			splits += 1
-			n += 1
 	# bends and straight runs: a few joints a tick
 	var cos_refine := cos(deg_to_rad(refine_bend_deg))
 	var cos_cull := cos(deg_to_rad(cull_straight_deg))
