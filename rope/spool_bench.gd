@@ -29,6 +29,8 @@ extends Node
 #   noshot=1 takes no screenshots (for a video recording at a fixed camera).
 #   pen_every=N (frames) measures how much of the tether is inside solids: a ray each way along every segment.
 #   With ret=S it then drives back towards the spool at half thrust for S s (try with reel=1).
+# topolog=1 logs every split/merge/payout and per-tick motion (spool_tether.gd topology_log) into
+#   topolog_out.events.csv and topolog_out.ticks.csv (topolog_out: a path prefix, default user://topolog).
 # boat=1 (default) puts the support boat (vehicles/boat) boat_at m astern; boat=0 uses the tether's placeholder spool.
 # tether=pbd swaps in the old fixed-length rope for comparison; tether=none flies with no tether.
 # Tether exports are set from the keys in KEYS. secs caps the run. cam=chase|wide|spool|pillar picks the camera, and
@@ -46,7 +48,7 @@ const KEYS = {"max": "max_length", "len0": "initial_length", "sp": "spacing", "f
 	"rovcol": "rov_collide", "rovskip": "rov_skip_length", "rovfric": "rov_friction", "rovmax": "rov_max_force",
 	"buoy": "buoyancy_ratio", "bendr": "min_bend_radius",
 	"bendsp": "bend_spacing", "claw_collide": "claw_collide", "clawr": "claw_contact_radius", "clawfric": "claw_friction",
-	"clawmax": "claw_max_force"}
+	"clawmax": "claw_max_force", "topolog": "topology_log"}
 const JAW = Vector3(-0.02, -0.25, 0.53)  # the gripper's jaw centre, in the vehicle's frame
 
 var params := {}
@@ -1165,6 +1167,16 @@ func _place_camera():
 			cam.look_at(Vector3(c.x, surface - depth, c.z), Vector3.UP)
 
 
+static func _write_csv(path: String, cols: Array, rows: Array):
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		push_warning("spool_bench: can't write %s" % path)
+		return
+	f.store_line(",".join(cols))
+	for row in rows:
+		f.store_line(",".join(row.map(func(e): return String.num(e, 6) if typeof(e) == TYPE_FLOAT else str(e))))
+
+
 static func _stats(a: Array, step := 0.1) -> Dictionary:
 	if a.is_empty():
 		return {}
@@ -1232,6 +1244,11 @@ func _finish():
 			result["pillar_wrap_deg"] = rad_to_deg(ang)
 	if scenario == "clawpinch":
 		print("SPOOLBENCH clawpinch " + JSON.stringify(result.claw))
+	if tether and tether.get("topology_log"):
+		var base: String = _p("topolog_out", "user://topolog")
+		_write_csv(base + ".events.csv", tether.TOPO_EVENT_COLS, tether.topo_events)
+		_write_csv(base + ".ticks.csv", tether.TOPO_TICK_COLS, tether.topo_ticks)
+		print("SPOOLBENCH topolog events=%d ticks=%d to %s" % [tether.topo_events.size(), tether.topo_ticks.size(), base])
 	var js = JSON.stringify(result)
 	print("SPOOLBENCH " + js)
 	if OS.has_feature("web"):

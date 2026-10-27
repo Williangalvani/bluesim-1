@@ -99,6 +99,8 @@ const G = 9.8
 @export var radial_sides := 6
 @export var draw_diameter := 0.0  # m, 0: the real diameter; thicker makes it visible from far away
 @export var color := Color(0.96, 0.75, 0.04)
+@export_group("Debug")
+@export var topology_log := false  # record each split/merge/payout and per-tick motion into topo_events/topo_ticks
 
 var rov: RigidBody3D
 var attach_local := Vector3.ZERO
@@ -181,6 +183,26 @@ var _cs_he := PackedVector3Array()
 var _cs_inv: Array[Transform3D] = []  # world to shape, where the claws are this substep
 var _cs_basis: Array[Basis] = []
 var _claw_bound := 0.0
+const TOPO_EVENT_COLS = ["tick", "kind", "index", "n_before", "n_after", "rest_a", "rest_b", "rest_c", "chord_off",
+	"stretch_before", "stretch_after", "new_stretch_max", "bend_viol_before", "bend_viol_after", "dpos_max", "dv_max",
+	"dsum_rest", "rest_err", "dke", "dmom", "render_d", "acc_before", "jerk_before", "acc_after", "jerk_after", "stale",
+	"lifetime", "ke_before", "speed", "nb_stretch_max", "mass_jump", "acc_first"]
+const TOPO_TICK_COLS = ["tick", "n", "ke", "acc_max", "acc_max_i", "jerk_max", "topo_dv_max", "rest_err", "events",
+	"render_d_max", "stretch_max", "strain_max"]
+var topo_events := []  # rows as TOPO_EVENT_COLS; acc/jerk_after fill in over the 10 ticks after the event
+var topo_ticks := []  # rows as TOPO_TICK_COLS
+var _lg_pid := PackedInt64Array()  # per particle: a stable id, the tick it was made, its acceleration last tick
+var _lg_born := PackedInt32Array()
+var _lg_a := PackedVector3Array()
+var _lg_v := PackedVector3Array()  # velocities at the end of last tick, after its topology changes
+var _lg_next_id := 0
+var _lg_hist := []  # the last 10 ticks: [ids, |acceleration|, |jerk|]
+var _lg_win := []  # events still watched: [row, ids, ticks left]
+var _lg_pre := {}
+var _lg_tick_events := PackedInt32Array()  # index of each change so far this tick
+var _lg_row := []
+var _lg_dv := 0.0
+var _lg_render := 0.0
 
 
 func _ready():
@@ -378,9 +400,13 @@ func _physics_process(delta):
 			_query_segments()
 	var t1 = Time.get_ticks_usec()
 	_solve(delta)
+	if topology_log:
+		_lg_tick(delta)
 	_payout_topology()
 	if not fixed_count and (adaptive or cull):
 		_adapt()
+	if topology_log:
+		_lg_end_tick()
 	solve_usec = Time.get_ticks_usec() - t0
 	query_usec = t1 - t0
 	rov.apply_force(force, attach_point() - rov.global_position)
@@ -1246,14 +1272,16 @@ func _payout_topology():
 		# split the cable leaving the spool: a new particle s_new from the last one
 		var r: float = rest[n - 1]
 		var f := s_new / r
-		_insert(n, x[n - 1].lerp(x[n], f), v[n - 1].lerp(Vector3.ZERO, f), s_new, r - s_new)
+		_insert(n, x[n - 1].lerp(x[n], f), v[n - 1].lerp(Vector3.ZERO, f), s_new, r - s_new, "payout_add")
 	elif n > 1 and rest[n - 1] < 0.05 and x[n - 1].distance_to(x[n]) < 0.3:
 		# reeled in past the last particle: it goes onto the spool
-		_remove(n - 1)
+		_remove(n - 1, "reel_remove")
 
 
-func _insert(i: int, pos: Vector3, vel: Vector3, rest_a: float, rest_b: float):
+func _insert(i: int, pos: Vector3, vel: Vector3, rest_a: float, rest_b: float, kind := ""):
 	# a new particle i on segment i - 1, which becomes rest_a (i - 1 to i) and rest_b (i to i + 1): length is kept
+	if topology_log:
+		_lg_before(i, kind, true, pos, rest_a, rest_b)
 	x.insert(i, pos)
 	v.insert(i, vel)
 	p.insert(i, pos)
@@ -1279,10 +1307,14 @@ func _insert(i: int, pos: Vector3, vel: Vector3, rest_a: float, rest_b: float):
 	kt.insert(i, 0.0)
 	for k in [i - 1, i, i + 1]:
 		_mass_at(k)
+	if topology_log:
+		_lg_after(i, 1)
 
 
-func _remove(i: int):
+func _remove(i: int, kind := ""):
 	# particle i goes, segments i - 1 and i become one (length kept); its momentum goes to its neighbours
+	if topology_log:
+		_lg_before(i, kind, false, x[i], rest[i - 1], rest[i])
 	var mi := 1.0 / inv_m[i] if inv_m[i] > 0 else 0.0
 	for nb in [i - 1, i + 1]:
 		if inv_m[nb] > 0 and mi > 0:
@@ -1314,6 +1346,8 @@ func _remove(i: int):
 	kt.remove_at(i)
 	for k in [i - 1, i]:
 		_mass_at(k)
+	if topology_log:
+		_lg_after(i, -1)
 
 
 func _adapt():
@@ -1336,7 +1370,7 @@ func _adapt():
 				var r: float = rest[j]
 				var cpt: Vector3 = s_pt[j]
 				var cn: Vector3 = s_n[j]
-				_insert(j + 1, pos, v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t))
+				_insert(j + 1, pos, v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t), "split_contact")
 				c_has[j + 1] = 1
 				c_pt[j + 1] = cpt
 				c_n[j + 1] = cn
@@ -1362,7 +1396,8 @@ func _adapt():
 			if rest[j] < 2.0 * piece:
 				continue
 			var r: float = rest[j]
-			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t))
+			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t),
+				"split_claw" if e.size() > 2 else "split_rov")
 			changes += 1
 			splits += 1
 			n += 1
@@ -1394,13 +1429,13 @@ func _adapt():
 			if j < n - 1 and r >= 2.0 * bsp and r > 1.5 * other:
 				var piece: float = clamp(2.0 * other, bsp, 0.5 * r)
 				var t: float = 1.0 - piece / r if j == i - 1 else piece / r  # measured from the joint
-				_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t))
+				_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t), "split_bend")
 				changes += 1
 				splits += 1
 				n += 1
 			elif j < n - 1 and r >= 2.0 * bsp:
 				# both about as long: halve the longer
-				_insert(j + 1, x[j].lerp(x[j + 1], 0.5), v[j].lerp(v[j + 1], 0.5), r * 0.5, r * 0.5)
+				_insert(j + 1, x[j].lerp(x[j + 1], 0.5), v[j].lerp(v[j + 1], 0.5), r * 0.5, r * 0.5, "split_bend")
 				changes += 1
 				splits += 1
 				n += 1
@@ -1408,7 +1443,7 @@ func _adapt():
 				and not s_has[i - 1] and not s_has[i] and rest[i - 1] + rest[i] <= max_segment \
 				and not _bent(i - 1, cos_keep) and not _bent(i + 1, cos_keep):
 			# straight and clear of solids: one particle fewer
-			_remove(i)
+			_remove(i, "merge_cull")
 			changes += 1
 			merges += 1
 			n -= 1
@@ -1422,6 +1457,244 @@ func _bent(i: int, cos_lim: float) -> bool:
 	var d2: Vector3 = x[i + 1] - x[i]
 	var l := d1.length() * d2.length()
 	return l > 1e-12 and d1.dot(d2) / l < cos_lim
+
+
+func _lg_tick(dt: float):
+	# after the solve, before this tick's topology changes: each particle's acceleration and jerk from the solve alone
+	var n := x.size() - 1
+	if _lg_pid.size() != n + 1:
+		_lg_pid.resize(n + 1)
+		_lg_born.resize(n + 1)
+		for i in range(n + 1):
+			_lg_pid[i] = _lg_next_id
+			_lg_next_id += 1
+		_lg_born.fill(-1)
+		_lg_a.resize(n + 1)
+		_lg_a.fill(Vector3.INF)
+		_lg_v = v.duplicate()
+	var accm := PackedFloat32Array()
+	var jerkm := PackedFloat32Array()
+	accm.resize(n + 1)
+	jerkm.resize(n + 1)
+	var amax := 0.0
+	var ai := -1
+	var jmax := 0.0
+	for i in range(1, n):
+		var a: Vector3 = (v[i] - _lg_v[i]) / dt
+		var pa: Vector3 = _lg_a[i]
+		accm[i] = a.length()
+		jerkm[i] = (a - pa).length() / dt if pa.is_finite() else 0.0
+		_lg_a[i] = a
+		if accm[i] > amax:
+			amax = accm[i]
+			ai = i
+		jmax = maxf(jmax, jerkm[i])
+	_lg_hist.append([_lg_pid.duplicate(), accm, jerkm])
+	if _lg_hist.size() > 10:
+		_lg_hist.pop_front()
+	for w in _lg_win:
+		for id in w[1]:
+			var k := _lg_pid.find(id)
+			if k > 0 and k < n:
+				w[0][23] = maxf(w[0][23], accm[k])
+				w[0][24] = maxf(w[0][24], jerkm[k])
+				if w[2] == 10:
+					w[0][31] = maxf(w[0][31], accm[k])
+		w[2] -= 1
+	_lg_win = _lg_win.filter(func(w): return w[2] > 0)
+	_lg_row = [_ticks, n, 0.0, amax, ai, jmax]
+	_lg_tick_events.clear()
+	_lg_dv = 0.0
+	_lg_render = 0.0
+
+
+func _lg_end_tick():
+	var sr := 0.0
+	var smax := 0.0
+	var emax := 0.0
+	for j in range(rest.size()):
+		sr += rest[j]
+		var e: float = x[j].distance_to(x[j + 1]) - rest[j]
+		smax = maxf(smax, e)
+		emax = maxf(emax, e / rest[j])
+	_lg_row[2] = _lg_energy()[0]
+	_lg_row.append_array([_lg_dv, sr - total, _lg_tick_events.size(), _lg_render, smax, emax])
+	topo_ticks.append(_lg_row)
+	_lg_v = v.duplicate()
+
+
+func _lg_energy() -> Array:
+	var ke := 0.0
+	var mom := Vector3.ZERO
+	for i in range(1, x.size() - 1):
+		if inv_m[i] > 0.0:
+			var m := 1.0 / inv_m[i]
+			ke += 0.5 * m * v[i].length_squared()
+			mom += v[i] * m
+	return [ke, mom]
+
+
+func _lg_stretch(segs: Array) -> Array:
+	# [sum over segs of chord - rest, the largest of them]
+	var s := 0.0
+	var worst := -INF
+	for j in segs:
+		var e: float = x[j].distance_to(x[j + 1]) - rest[j]
+		s += e
+		worst = maxf(worst, e)
+	return [s, worst]
+
+
+func _lg_bend_viol(a: int, b: int) -> float:
+	# worst shortfall of particles two apart from the bend limit's distance (as _solve's bmin), joints a + 1..b + 1
+	if max_bend_deg >= 180.0:
+		return 0.0
+	var worst := 0.0
+	for j in range(maxi(a, 0), mini(b, rest.size() - 2) + 1):
+		var ra: float = rest[j]
+		var rb: float = rest[j + 1]
+		var th: float = min(_bend_cap, 0.5 * (ra + rb) / maxf(min_bend_radius, 1e-4))
+		var bm := sqrt(max(ra * ra + rb * rb + 2.0 * ra * rb * cos(th), 0.0))
+		worst = maxf(worst, bm - x[j].distance_to(x[j + 2]))
+	return worst
+
+
+func _lg_curve(a: int, b: int) -> PackedVector3Array:
+	# the centreline _process draws from particle a to b, as near the camera; keep in step with _process
+	var n := x.size() - 1
+	var cos_bend := cos(deg_to_rad(bend_subdivide_deg))
+	var out := PackedVector3Array()
+	for i in range(a, b):
+		var p0: Vector3 = x[max(i - 1, 0)]
+		var p1: Vector3 = x[i]
+		var p2: Vector3 = x[i + 1]
+		var p3: Vector3 = x[min(i + 2, n)]
+		var sub := 1
+		if render_subdivisions > 1:
+			var d1 := (p2 - p1).normalized()
+			if (p1 - p0).normalized().dot(d1) < cos_bend or d1.dot((p3 - p2).normalized()) < cos_bend:
+				sub = render_subdivisions
+		if sub == 1:
+			out.append(p1)
+			continue
+		var d01 := maxf(p0.distance_to(p1), 1e-6)
+		var d12 := maxf(p1.distance_to(p2), 1e-6)
+		var d23 := maxf(p2.distance_to(p3), 1e-6)
+		var m1: Vector3 = ((p1 - p0) * (d12 / d01) * d12 + (p2 - p1) * d01) / (d01 + d12) if i > 0 else p2 - p1
+		var m2: Vector3 = ((p2 - p1) * d23 + (p3 - p2) * (d12 / d23) * d12) / (d12 + d23) if i + 2 <= n else p2 - p1
+		for sdiv in range(sub):
+			var t := float(sdiv) / sub
+			var t2 := t * t
+			var t3 := t2 * t
+			out.append((2.0 * t3 - 3.0 * t2 + 1.0) * p1 + (t3 - 2.0 * t2 + t) * m1 + (-2.0 * t3 + 3.0 * t2) * p2 + (t3 - t2) * m2)
+	out.append(x[b])
+	return out
+
+
+static func _lg_far(a: PackedVector3Array, b: PackedVector3Array) -> float:
+	# farthest point of polyline a (each piece sampled 4 times) from polyline b
+	var worst := 0.0
+	for k in range(a.size()):
+		for s in range(4 if k < a.size() - 1 else 1):
+			var q: Vector3 = a[k].lerp(a[k + 1], s * 0.25) if s > 0 else a[k]
+			var best := INF
+			for m in range(b.size() - 1):
+				best = minf(best, q.distance_squared_to(Geometry3D.get_closest_point_to_segment(q, b[m], b[m + 1])))
+			worst = maxf(worst, best)
+	return sqrt(worst)
+
+
+func _lg_before(i: int, kind: String, ins: bool, pos: Vector3, rest_a: float, rest_b: float):
+	# i: the new particle's index (insert) or the one going (remove, pos is where it is)
+	var n := x.size() - 1
+	var nb_hi := i + 2 if ins else i + 3
+	var vel := {}
+	var at := {}
+	var mass := {}
+	var ids := []
+	for k in range(maxi(i - 3, 1), mini(nb_hi, n - 1) + 1):
+		if not ins and k == i:
+			continue
+		vel[_lg_pid[k]] = v[k]
+		at[_lg_pid[k]] = x[k]
+		mass[_lg_pid[k]] = 1.0 / inv_m[k] if inv_m[k] > 0.0 else 0.0
+		ids.append(_lg_pid[k])
+	var nb_st := 0.0
+	for j in range(maxi(i - 3, 0), mini(i + 2, n - 1) + 1):
+		nb_st = maxf(nb_st, absf(x[j].distance_to(x[j + 1]) - rest[j]))
+	var a_b := 0.0
+	var j_b := 0.0
+	for h in _lg_hist:
+		for id in ids + ([] if ins else [_lg_pid[i]]):
+			var k: int = h[0].find(id)
+			if k >= 0:
+				a_b = maxf(a_b, h[1][k])
+				j_b = maxf(j_b, h[2][k])
+	var lo: Vector3 = x[i - 1]
+	var hi: Vector3 = x[i] if ins else x[i + 1]
+	var off := pos.distance_to(Geometry3D.get_closest_point_to_segment(pos, lo, hi))
+	var s := maxi(0, i - 4)
+	var e := mini(n, i + 3 if ins else i + 4)
+	var sr := 0.0
+	for r in rest:
+		sr += r
+	var en := _lg_energy()
+	var stale := 0
+	if kind in ["split_rov", "split_claw"]:
+		for ev in _lg_tick_events:
+			stale |= int(ev <= i)
+	_lg_pre = {"kind": kind, "i": i, "n": n, "ins": ins, "vel": vel, "at": at, "mass": mass, "nb_st": nb_st, "a_b": a_b, "j_b": j_b, "off": off,
+		"rests": [rest[i - 1], rest_a, rest_b] if ins else [rest_a, rest_b, rest_a + rest_b],
+		"st": _lg_stretch([i - 1] if ins else [i - 1, i]), "bend": _lg_bend_viol(i - 3, i + 1),
+		"curve": _lg_curve(s, e), "s": s, "e": e, "sr": sr, "ke": en[0], "mom": en[1], "stale": stale,
+		"life": 0 if ins else (_ticks - _lg_born[i] if _lg_born[i] >= 0 else -1), "speed": v[i].length() if not ins else 0.0}
+
+
+func _lg_after(i: int, dn: int):
+	var pr := _lg_pre
+	if dn > 0:
+		_lg_pid.insert(i, _lg_next_id)
+		_lg_next_id += 1
+		_lg_born.insert(i, _ticks)
+		var a0: Vector3 = _lg_a[i - 1]
+		var a1: Vector3 = _lg_a[i]
+		_lg_a.insert(i, a0.lerp(a1, 0.5) if a0.is_finite() and a1.is_finite() else Vector3.INF)
+		pr.speed = v[i].length()
+	else:
+		_lg_pid.remove_at(i)
+		_lg_born.remove_at(i)
+		_lg_a.remove_at(i)
+	var n := x.size() - 1
+	var dpos := 0.0
+	var dv := 0.0
+	var mj := 1.0
+	for k in range(maxi(i - 3, 1), mini(i + 3, n - 1) + 1):
+		var id := _lg_pid[k]
+		if pr.at.has(id):
+			dpos = maxf(dpos, x[k].distance_to(pr.at[id]))
+			dv = maxf(dv, v[k].distance_to(pr.vel[id]))
+			var m0: float = pr.mass[id]
+			var m1 := 1.0 / inv_m[k] if inv_m[k] > 0.0 else 0.0
+			if m0 > 0.0 and m1 > 0.0:
+				mj = maxf(mj, maxf(m1 / m0, m0 / m1))
+	var st := _lg_stretch([i - 1, i] if dn > 0 else [i - 1])
+	var sr := 0.0
+	for r in rest:
+		sr += r
+	var en := _lg_energy()
+	var rd := _lg_far(pr.curve, _lg_curve(pr.s, pr.e + dn))
+	rd = maxf(rd, _lg_far(_lg_curve(pr.s, pr.e + dn), pr.curve))
+	var row := [_ticks, pr.kind, i, pr.n, n, pr.rests[0], pr.rests[1], pr.rests[2], pr.off, pr.st[0], st[0], st[1],
+		pr.bend, _lg_bend_viol(i - 3, i + 1), dpos, dv, sr - pr.sr, sr - total, en[0] - pr.ke, (en[1] - pr.mom).length(),
+		rd, pr.a_b, pr.j_b, 0.0, 0.0, pr.stale, pr.life, pr.ke, pr.speed, pr.nb_st, mj, 0.0]
+	topo_events.append(row)
+	var ids := []
+	for k in range(maxi(i - 3, 1), mini(i + 3, n - 1) + 1):
+		ids.append(_lg_pid[k])
+	_lg_win.append([row, ids, 10])
+	_lg_tick_events.append(i)
+	_lg_dv = maxf(_lg_dv, dv)
+	_lg_render = maxf(_lg_render, rd)
 
 
 func _build_mesh():
