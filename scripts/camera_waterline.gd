@@ -152,17 +152,19 @@ shader_type canvas_item;
 uniform sampler2D other_side : filter_linear;
 uniform mat3 camera_basis;
 uniform float tan_half_fov;
+uniform float aspect;
 // how far up a view direction points where it meets the water on the dome
 uniform float waterline;
 uniform bool other_side_is_air;
+// s, the script's clock, so out_of_water() runs the same waves
+uniform float time;
 
 void fragment() {
-	float aspect = SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;
 	vec2 ndc = SCREEN_UV * 2.0 - 1.0;
 	vec3 view = normalize(camera_basis * vec3(ndc.x * tan_half_fov * aspect, -ndc.y * tan_half_fov, -1.0));
 	// waves running along the dome, by heading so they stay put as the camera pans
 	float heading = atan(view.x, view.z);
-	float line = waterline + 0.03 * sin(heading * 7.0 + TIME * 2.3) + 0.015 * sin(heading * 19.0 - TIME * 3.7);
+	float line = waterline + 0.03 * sin(heading * 7.0 + time * 2.3) + 0.015 * sin(heading * 19.0 - time * 3.7);
 	// from just under the surface the water's underside shows above the horizon, as a band with a straight edge
 	if (!other_side_is_air) {
 		line = min(line, 0.0);
@@ -180,6 +182,10 @@ var camera: Camera3D
 var camera_near: float
 var underwater_environment: Environment
 var surface_environment = make_surface_environment()
+# m, of the camera above the surface
+var height = 0.0
+# s, wrapping around like the shaders' TIME
+var time = 0.0
 var above_water = false
 var wetness = 0.0
 var splash = 0.0
@@ -252,7 +258,8 @@ func _add_surfacing_drops(view: SubViewport):
 
 
 func _process(delta):
-	var height = camera.global_position.y - Globals.surface_altitude
+	height = camera.global_position.y - Globals.surface_altitude
+	time = fmod(Time.get_ticks_msec() / 1000.0, 3600.0)
 	if above_water != (height > (-HYSTERESIS if above_water else HYSTERESIS)):
 		above_water = not above_water
 		camera.environment = surface_environment if above_water else underwater_environment
@@ -273,7 +280,7 @@ func _process(delta):
 			var top = (view_to_dome() * Vector3(0, tan_half_fov, -1)).normalized()
 			var bottom = (view_to_dome() * Vector3(0, -tan_half_fov, -1)).normalized()
 			lens_drops.wet(acos(top.dot(dome_up)), acos(bottom.dot(dome_up)))
-	update_split(height)
+	update_split()
 	wetness = max(wetness - delta / DRY_TIME, 0)
 	splash = max(splash - delta / SPLASH_TIME, 0)
 	# blending over every pixel of the image is not free, so only while there is water to draw
@@ -294,11 +301,77 @@ func view_to_dome() -> Basis:
 	return camera.get_parent_node_3d().global_transform.basis.inverse() * camera.global_transform.basis
 
 
+func aspect() -> float:
+	var size = camera.get_viewport().get_visible_rect().size
+	return size.x / max(size.y, 1.0)
+
+
+# what the split's shader works its line out from, so other effects on the image can draw the same line. Off the dome
+# the line is far above every view direction under the water and far below them all above it, so all of the image is
+# in or out of the water by the same formula.
+func line_uniforms() -> Dictionary:
+	var waterline = -height / DOME_RADIUS
+	if abs(height) >= DOME_RADIUS:
+		waterline = -4.0 if height > 0 else 4.0
+	return {
+		"camera_basis": camera.global_basis,
+		"tan_half_fov": tan(deg_to_rad(camera.fov / 2)),
+		"aspect": aspect(),
+		"waterline": waterline,
+		# from just under the surface the water's underside shows above the horizon
+		"cap_at_zero": above_water,
+		"time": time,
+	}
+
+
+# where the camera looks at uv on its image (0 to 1, y down), as the split works it out
+func view_direction(uv: Vector2) -> Vector3:
+	var line = line_uniforms()
+	var ndc = uv * 2 - Vector2.ONE
+	var toward = Vector3(ndc.x * line.tan_half_fov * line.aspect, -ndc.y * line.tan_half_fov, -1)
+	return (line.camera_basis * toward).normalized()
+
+
+# whether the image shows the air at uv, as the split has it, waves and all, so other effects on the image can agree
+# with it
+func out_of_water(uv: Vector2) -> bool:
+	var line = line_uniforms()
+	var view = view_direction(uv)
+	var heading = atan2(view.x, view.z)
+	var y = line.waterline + 0.03 * sin(heading * 7 + line.time * 2.3) + 0.015 * sin(heading * 19 - line.time * 3.7)
+	if line.cap_at_zero:
+		y = min(y, 0.0)
+	return view.y > y
+
+
+# 1 while all of the image is out of the water, -1 while all of it is in, 0 while the split's line may cross it
+func coverage() -> int:
+	if abs(height) < DOME_RADIUS:
+		return 0
+	return 1 if height > 0 else -1
+
+
+# the near plane's corners reach past the camera toward the surface when it is pitched or rolled, so near the surface
+# it comes in just enough for them not to cut through the water
+func near_clear_of_surface() -> float:
+	var tan_half_fov = tan(deg_to_rad(camera.fov / 2))
+	var toward_surface = 1.0 if height < 0 else -1.0
+	# how far toward the surface its corners are, per metre of near
+	var reach = 0.0
+	for x in [-1, 1]:
+		for y in [-1, 1]:
+			var corner = camera.global_basis * Vector3(x * tan_half_fov * aspect(), y * tan_half_fov, -1)
+			reach = max(reach, corner.y * toward_surface)
+	if reach <= 0:
+		return camera_near
+	return clamp(0.8 * abs(height) / reach, NEAR_IN_DOME, camera_near)
+
+
 # a second camera renders the other side of the surface, so only while the surface crosses the dome
-func update_split(height: float):
+func update_split():
 	split.visible = abs(height) < DOME_RADIUS
 	other_side.render_target_update_mode = SubViewport.UPDATE_ALWAYS if split.visible else SubViewport.UPDATE_DISABLED
-	camera.near = NEAR_IN_DOME if split.visible else camera_near
+	camera.near = NEAR_IN_DOME if split.visible else near_clear_of_surface()
 	if not split.visible:
 		return
 	# half the resolution, since it shows either sky or the murk of the water
@@ -310,7 +383,7 @@ func update_split(height: float):
 	other_camera.global_transform = camera.global_transform
 	# where the dome is on the other side of the surface, so it does not look at the water from the wrong side
 	other_camera.global_position.y = Globals.surface_altitude + (-0.01 if above_water else 0.01)
-	split.material.set_shader_parameter("camera_basis", camera.global_transform.basis)
-	split.material.set_shader_parameter("tan_half_fov", tan(deg_to_rad(camera.fov / 2)))
-	split.material.set_shader_parameter("waterline", -height / DOME_RADIUS)
-	split.material.set_shader_parameter("other_side_is_air", not above_water)
+	var line = line_uniforms()
+	for uniform in ["camera_basis", "tan_half_fov", "aspect", "waterline", "time"]:
+		split.material.set_shader_parameter(uniform, line[uniform])
+	split.material.set_shader_parameter("other_side_is_air", not line.cap_at_zero)
