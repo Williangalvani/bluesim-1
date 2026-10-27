@@ -13,6 +13,7 @@ const ANGULAR_DRAG = Vector3(5, 21.6, 5)
 # a thruster less than a duct diameter under the surface sucks air into its propeller, losing thrust the closer it gets
 const VENTILATION_DEPTH = 0.1  # m
 const ThrusterBubbles = preload("res://scripts/thruster_bubbles.gd")
+const CameraWaterline = preload("res://scripts/camera_waterline.gd")
 # down, as a vertical thruster blows, and slightly forward so they rise back up in front of the camera
 const BUBBLES_DIRECTION = Vector3(0, -1, 0.1)
 
@@ -212,6 +213,7 @@ func _ready():
 	for thruster in [$t5, $t6]:
 		thruster_bubbles.append(ThrusterBubbles.new(thruster, BUBBLES_DIRECTION))
 		add_child(thruster_bubbles[-1])
+	add_child(CameraWaterline.new($Camera3D))
 	$"bluerov cleaned decimated2/GPUParticles3D2".material_override.set_shader_parameter("surface_altitude", Globals.surface_altitude)
 	_initial_position = get_global_transform().origin
 	print("setting phyisics process...")
