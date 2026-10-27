@@ -1,7 +1,9 @@
 // An air bubble stuck on the outside of the camera's dome, underwater: a little lens of air that shows the view around
-// it shrunk and the right way up, a bright rim where the water's surface around the air catches the light, a darker ring
-// inside it, and the glint of the light above. Drawn on a camera-facing quad per particle (scripts/dome_bubbles.gd),
-// with four reads of the screen texture per pixel.
+// it shrunk and the right way up, a bright rim where the water's surface around the air catches the light, brighter on
+// the side towards the sun, a darker ring inside it, and the glints of the sun: one where the cap's curve turns it towards
+// the camera, and a fainter one opposite where the light coming in through the bubble meets its far side, so they move
+// round the bubble as the camera turns. Drawn on a camera-facing quad per particle (scripts/dome_bubbles.gd), which
+// gives it the sun's direction and colour, with four reads of the screen texture per pixel.
 //
 // The screen texture only holds what was drawn before the transparent pass, in both Forward+ and Compatibility, so the
 // water's surface is not in it: where the view through the bubble goes up to the surface, what is already drawn under
@@ -30,12 +32,22 @@ uniform vec3 rim_tint = vec3(0.8, 0.93, 1.0);
 uniform float rim_strength : hint_range(0.0, 2.0) = 0.7;
 uniform float ring_darkness : hint_range(0.0, 1.0) = 0.45;
 uniform float highlight_strength : hint_range(0.0, 3.0) = 1.0;
+// towards the sun, in world space
+uniform vec3 light_direction = vec3(0.198, 0.883, 0.425);
+// the sun's, in sRGB, its largest component 1, times how bright it is
+uniform vec3 light_colour = vec3(1.0);
 
 varying float world_y;
 // the bubble's centre, in view space
 varying vec3 centre;
 // its turn (cosine, sine) on the dome and how round it is, the same for all its life
 varying vec3 shape;
+// where on the bubble the sun glints, along its own axes as q is below
+varying vec2 glint_at;
+// how bright the near and far glints are, and how big the near one is, by where the sun is
+varying vec3 glint_light;
+// across the view, towards the sun, as long as the sun is far from straight ahead or behind
+varying vec2 light_across;
 
 vec2 to_screen(mat4 projection, vec3 direction) {
 	vec4 clip = projection * vec4(direction, 0.0);
@@ -76,6 +88,28 @@ void vertex() {
 	float id = float(INSTANCE_ID) * 1.618 + INSTANCE_CUSTOM.w * 31.7;
 	vec2 random = fract(sin(vec2(id * 12.9898 + 4.1, id * 78.233 + 1.3)) * 43758.5453);
 	shape = vec3(cos(random.x * TAU), sin(random.x * TAU), mix(0.8, 1.0, random.y));
+
+	// the sun glints where the cap's normal, taken as facing the camera, is halfway between the way to the sun and the
+	// way to the camera
+	vec3 light = normalize(mat3(VIEW_MATRIX) * light_direction);
+	vec3 to_camera = -normalize(centre);
+	vec3 half_way = light + to_camera + vec3(0.0, 1e-4, 0.0);
+	// on a cap of height cap_height, the normal leans out by as much as the half way does at
+	// r = across * cap_height / sqrt(along^2 + (across * cap_height)^2); kept inside the rim
+	float across = length(half_way.xy);
+	float along = max(half_way.z, 1e-4);
+	float lean = min(across * cap_height * inversesqrt(along * along + across * across * cap_height * cap_height), 0.85);
+	// the normal's xy is turn's inverse of (q.x, q.y / shape.z), so q is along this
+	mat2 turn = mat2(vec2(shape.x, -shape.y), vec2(shape.y, shape.x));
+	vec2 towards = turn * half_way.xy;
+	towards.y *= shape.z;
+	glint_at = towards * (lean / max(length(towards), 1e-5));
+	// with the sun ahead of the camera, past the bubble, the near glint is a dimmer, smaller one near the rim, and the far
+	// one, of the light coming through the bubble, is brighter
+	float facing = dot(light, to_camera);
+	float lit = smoothstep(-0.4, 0.2, facing);
+	glint_light = vec3(mix(0.55, 1.0, lit), mix(0.6, 0.3, smoothstep(-0.4, 0.4, facing)), mix(0.8, 1.0, lit));
+	light_across = light.xy;
 }
 
 void fragment() {
@@ -134,14 +168,18 @@ void fragment() {
 	// brighter in the middle by about as much as the ring is darker, so on the whole it is as bright as the water around
 	float lift = 0.25 * ring_darkness * (1.0 - smoothstep(0.4, 0.72, r));
 
-	// the light from above, glinting off the top of the bubble towards the camera, and through it off its far side
-	vec2 up = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xy + vec2(0.0, 1e-4));
-	vec2 glint_at = normalize(up + 0.8 * vec2(-up.y, up.x)) * 0.48;
-	float glint_size = max(0.17, 1.5 * pixel);
-	float glint = exp(-dot(p - glint_at, p - glint_at) / (glint_size * glint_size));
-	vec2 far_glint_at = -glint_at * 0.8;
+	// the sun, glinting off the bubble towards the camera, and through it off its far side, opposite
+	float glint_size = max(0.17 * glint_light.z, 1.5 * pixel);
+	float glint = glint_light.x * exp(-dot(q - glint_at, q - glint_at) / (glint_size * glint_size));
+	vec2 far_glint_at = -0.75 * glint_at;
 	float far_glint_size = max(0.11, 1.2 * pixel);
-	glint += 0.35 * exp(-dot(p - far_glint_at, p - far_glint_at) / (far_glint_size * far_glint_size));
+	glint += glint_light.y * exp(-dot(q - far_glint_at, q - far_glint_at) / (far_glint_size * far_glint_size));
+	// the rim is brighter on the side towards the sun, the more so the further the sun is to that side, and round the
+	// whole of it about as bright as it would be without the sun
+	vec3 rim_light = 0.8 + 0.5 * max(dot(p, light_across), 0.0) / max(length(p), 1e-3) * light_colour;
+	// and paler where, curving towards the camera, it mirrors the way up to the surface
+	vec3 mirrored = reflect(view, vec3(normal.xy, -normal.z));
+	float sky = surface_seen(mat3(INV_VIEW_MATRIX) * mirrored, camera_y);
 
 	// premultiplied: what is already drawn under the bubble shows through by how much is left of the surface
 	float shade = 1.0 - ring_darkness * ring;
@@ -151,9 +189,10 @@ void fragment() {
 	float rim_amount = clamp(rim * rim_strength, 0.0, 1.0);
 	// silvery, as a mirror is, more than the colour of the water it shows
 	vec3 reflected = mix(around, vec3(dot(around, vec3(0.3, 0.5, 0.2))), 0.5);
-	colour = mix(colour, rim_tint * (0.25 + 1.5 * reflected), rim_amount);
+	reflected = mix(reflected, surface_colour, 0.5 * sky);
+	colour = mix(colour, rim_tint * (0.25 + 1.5 * reflected) * rim_light, rim_amount);
 	behind *= 1.0 - rim_amount;
-	colour += glint * highlight_strength * (0.4 + 0.6 * brightness);
+	colour += glint * highlight_strength * (0.4 + 0.6 * brightness) * light_colour;
 	ALBEDO = from_srgb(colour, OUTPUT_IS_SRGB) * coverage;
 	ALPHA = coverage * (1.0 - behind);
 }
