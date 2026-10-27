@@ -79,6 +79,7 @@ const G = 9.8
 @export var cull_straight_deg := 4.0  # a joint this straight (and clear of solids for merge_delay ticks) can go
 @export var max_segment := 6.0  # m
 @export var merge_delay := 60  # ticks clear of solids before a particle can be merged away
+@export var merge_max_stretch := 0.005  # m: no merge next to a segment stretched more than this (it would let it go)
 @export var max_total_particles := 128
 @export var topology_changes_per_tick := 2  # splits/merges a tick, so nothing pops
 @export var topology_scan_per_tick := 24  # joints checked for bends/culling a tick
@@ -1441,8 +1442,12 @@ func _adapt():
 				n += 1
 		elif cull and segment_collide and c > cos_cull and i < n - 1 and far_ticks[i] >= merge_delay and not c_has[i] \
 				and not s_has[i - 1] and not s_has[i] and rest[i - 1] + rest[i] <= max_segment \
-				and not _bent(i - 1, cos_keep) and not _bent(i + 1, cos_keep):
-			# straight and clear of solids: one particle fewer
+				and maxf(rest[i - 1], rest[i]) <= 2.0 * minf(rest[i - 1], rest[i]) \
+				and (i == 1 or far_ticks[i - 1] >= merge_delay) and far_ticks[i + 1] >= merge_delay \
+				and not _bent(i - 1, cos_keep) and not _bent(i + 1, cos_keep) and not _stretched(i - 2, i + 1):
+			# straight and clear of solids: one particle fewer. Only pieces about as long as each other (so no
+			# neighbour's mass more than doubles: graded pieces go back up by doubling) and nothing stretched next to
+			# it, or the new masses let the stretch go in one tick
 			_remove(i, "merge_cull")
 			changes += 1
 			merges += 1
@@ -1457,6 +1462,14 @@ func _bent(i: int, cos_lim: float) -> bool:
 	var d2: Vector3 = x[i + 1] - x[i]
 	var l := d1.length() * d2.length()
 	return l > 1e-12 and d1.dot(d2) / l < cos_lim
+
+
+func _stretched(a: int, b: int) -> bool:
+	# is any of segments a..b longer than its rest by more than merge_max_stretch?
+	for j in range(maxi(a, 0), mini(b, rest.size() - 1) + 1):
+		if x[j].distance_to(x[j + 1]) - rest[j] > merge_max_stretch:
+			return true
+	return false
 
 
 func _lg_tick(dt: float):
