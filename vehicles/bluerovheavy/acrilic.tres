@@ -1,0 +1,29 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://q2po04h6nttj"]
+
+[sub_resource type="Shader" id="Shader_acril"]
+code = "// clear acrylic (camera dome, electronics tube): faint face-on, visible rim, no depth writes
+shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_disabled;
+
+uniform vec3 tint : source_color = vec3(0.85, 0.93, 1.0);
+uniform float alpha_face : hint_range(0.0, 1.0) = 0.04;
+uniform float alpha_edge : hint_range(0.0, 1.0) = 0.5;
+uniform float fresnel_power : hint_range(0.5, 8.0) = 4.0;
+uniform float roughness : hint_range(0.0, 1.0) = 0.05;
+uniform float specular : hint_range(0.0, 1.0) = 0.5;
+// fade out near the camera, so the ROV's own camera (inside the dome) sees through it
+uniform float hide_near : hint_range(0.0, 1.0) = 0.15;
+uniform float hide_far : hint_range(0.0, 2.0) = 0.25;
+
+void fragment() {
+	float fresnel = pow(max(1.0 - abs(dot(NORMAL, VIEW)), 0.0), fresnel_power);
+	ALBEDO = tint;
+	METALLIC = 0.0;
+	ROUGHNESS = roughness;
+	SPECULAR = specular;
+	ALPHA = mix(alpha_face, alpha_edge, fresnel) * smoothstep(hide_near, hide_far, length(VERTEX));
+}
+"
+
+[resource]
+shader = SubResource("Shader_acril")

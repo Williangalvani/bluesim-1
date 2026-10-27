@@ -39,7 +39,15 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={}
+_subresources={
+"materials": {
+"acrilic": {
+"use_external/enabled": true,
+"use_external/fallback_path": "res://vehicles/bluerovheavy/acrilic.tres",
+"use_external/path": "uid://q2po04h6nttj"
+}
+}
+}
 gltf/naming_version=0
 gltf/embedded_image_handling=1
 gltf/texture_map_mode=0
