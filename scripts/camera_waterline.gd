@@ -16,6 +16,11 @@ const NEAR_IN_DOME = 0.005
 # in a SubViewport a blank screen texture: drops that run down around the dome or dry off one by one, and whitewater on
 # a splash
 const LensDrops = preload("res://scripts/lens_drops.gd")
+# Heartfelt-based drops (scripts/surfacing_drops.gd): one burst on surfacing that runs off the dome. When the camera's
+# view is a SubViewport shown by a SubViewportContainer (BlueSim's ROV view) they are drawn over it and replace the
+# lens_drops overlay below; set USE_SURFACING_DROPS = false to go back to that one.
+const SurfacingDrops = preload("res://scripts/surfacing_drops.gd")
+const USE_SURFACING_DROPS = true
 
 const LENS_WATER_SHADER = """
 shader_type canvas_item;
@@ -183,6 +188,7 @@ var other_camera = Camera3D.new()
 var split = make_overlay(SPLIT_SHADER)
 var overlay = make_overlay(LENS_WATER_SHADER % LensDrops.MAX_DROPS)
 var lens_drops = LensDrops.new()
+var surfacing_drops: SurfacingDrops
 
 
 # the levels' own sun lights the water, too dim for BlueSim's physical sky, so above it the camera gets a fixed one
@@ -229,6 +235,20 @@ func _ready():
 	overlay.material.set_shader_parameter("trails", lens_drops.texture)
 	overlay.material.set_shader_parameter("map_around", LensDrops.MAP_AROUND)
 	overlay.material.set_shader_parameter("dry_time", DRY_TIME)
+	var view = camera.get_viewport()
+	if USE_SURFACING_DROPS and view is SubViewport and view.get_parent() is SubViewportContainer:
+		surfacing_drops = SurfacingDrops.new()
+		surfacing_drops.name = "SurfacingDrops"
+		surfacing_drops.camera = camera
+		surfacing_drops.source_viewport = view
+		_add_surfacing_drops.call_deferred(view)
+
+
+# over the camera's image and under the panels the container also holds
+func _add_surfacing_drops(view: SubViewport):
+	var container = view.get_parent()
+	container.add_child(surfacing_drops)
+	container.move_child(surfacing_drops, view.get_index() + 1)
 
 
 func _process(delta):
@@ -257,7 +277,7 @@ func _process(delta):
 	wetness = max(wetness - delta / DRY_TIME, 0)
 	splash = max(splash - delta / SPLASH_TIME, 0)
 	# blending over every pixel of the image is not free, so only while there is water to draw
-	overlay.visible = wetness > 0 or splash > 0
+	overlay.visible = (wetness > 0 or splash > 0) and surfacing_drops == null
 	if overlay.visible:
 		overlay.material.set_shader_parameter("wetness", wetness)
 		overlay.material.set_shader_parameter("age", (1 - wetness) * DRY_TIME)
