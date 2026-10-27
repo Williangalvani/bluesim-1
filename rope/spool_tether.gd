@@ -1317,10 +1317,13 @@ func _remove(i: int, kind := ""):
 	if topology_log:
 		_lg_before(i, kind, false, x[i], rest[i - 1], rest[i])
 	var mi := 1.0 / inv_m[i] if inv_m[i] > 0 else 0.0
+	var ra: float = rest[i - 1]
+	var rb: float = rest[i]
+	# each neighbour takes on half of the segment beyond it, so that share of i's momentum, over its new mass below
+	var mom: Array[Vector3] = []
 	for nb in [i - 1, i + 1]:
-		if inv_m[nb] > 0 and mi > 0:
-			var mn: float = 1.0 / inv_m[nb]
-			v[nb] = (v[nb] * mn + v[i] * (0.5 * mi)) / (mn + 0.5 * mi)
+		var mn: float = 1.0 / inv_m[nb] if inv_m[nb] > 0 else 0.0
+		mom.append(v[nb] * mn + v[i] * (mi * (rb if nb == i - 1 else ra) / (ra + rb)))
 	rest[i - 1] += rest[i]
 	rest.remove_at(i)
 	lambdas.remove_at(i)
@@ -1347,6 +1350,8 @@ func _remove(i: int, kind := ""):
 	kt.remove_at(i)
 	for k in [i - 1, i]:
 		_mass_at(k)
+		if inv_m[k] > 0 and mi > 0:
+			v[k] = mom[k - i + 1] * inv_m[k]
 	if topology_log:
 		_lg_after(i, -1)
 
