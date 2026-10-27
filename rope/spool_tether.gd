@@ -1595,6 +1595,8 @@ func _lg_curve(a: int, b: int) -> PackedVector3Array:
 		var d23 := maxf(p2.distance_to(p3), 1e-6)
 		var m1: Vector3 = ((p1 - p0) * (d12 / d01) * d12 + (p2 - p1) * d01) / (d01 + d12) if i > 0 else p2 - p1
 		var m2: Vector3 = ((p2 - p1) * d23 + (p3 - p2) * (d12 / d23) * d12) / (d12 + d23) if i + 2 <= n else p2 - p1
+		m1 = (p2 - p1).lerp(m1, minf(1.0, 2.0 * d01 / d12))
+		m2 = (p2 - p1).lerp(m2, minf(1.0, 2.0 * d23 / d12))
 		for sdiv in range(sub):
 			var t := float(sdiv) / sub
 			var t2 := t * t
@@ -1776,6 +1778,9 @@ func _process(_delta):
 		var d23 := maxf(p2.distance_to(p3), 1e-6)
 		var m1: Vector3 = ((p1 - p0) * (d12 / d01) * d12 + (p2 - p1) * d01) / (d01 + d12) if i > 0 else p2 - p1
 		var m2: Vector3 = ((p2 - p1) * d23 + (p3 - p2) * (d12 / d23) * d12) / (d12 + d23) if i + 2 <= n else p2 - p1
+		# a much shorter neighbour only turns the end in proportion: a stub would bow a long segment far out
+		m1 = (p2 - p1).lerp(m1, minf(1.0, 2.0 * d01 / d12))
+		m2 = (p2 - p1).lerp(m2, minf(1.0, 2.0 * d23 / d12))
 		for sdiv in range(sub):
 			var t := float(sdiv) / sub
 			var t2 := t * t
