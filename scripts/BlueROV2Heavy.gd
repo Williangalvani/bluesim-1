@@ -50,7 +50,10 @@ var ventilation = 0.0
 
 func connect_fmd_in():
 	if Globals.isHTML5:
-		web_channel = JavaScriptBridge.create_object("BroadcastChannel", WEB_CHANNEL_NAME)
+		# ?channel=ID gives each Cockpit tab its own channel, older Cockpits don't pass one
+		var channel_id = JavaScriptBridge.eval("new URLSearchParams(location.search).get('channel')?.match(/^[A-Za-z0-9_-]{1,64}$/)?.[0] ?? ''")
+		var channel_name = WEB_CHANNEL_NAME + ("-" + channel_id if channel_id else "")
+		web_channel = JavaScriptBridge.create_object("BroadcastChannel", channel_name)
 		web_on_message = JavaScriptBridge.create_callback(_on_web_message)
 		web_channel.onmessage = web_on_message
 		return

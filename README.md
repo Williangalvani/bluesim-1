@@ -47,7 +47,8 @@ If there is not SITL instance attached, these keys can be used to control the RO
 # Web build for Cockpit
 
 [Cockpit](https://github.com/bluerobotics/cockpit) can run ArduSub in the browser with the web build as its physics,
-shown in its Simulator widget. The two talk over the `cockpit-sitl-json` BroadcastChannel, so the build has to be
+shown in its Simulator widget. The two talk over the `cockpit-sitl-json` BroadcastChannel (or `cockpit-sitl-json-<id>`
+with the optional `?channel=<id>` URL parameter Cockpit sets per tab), so the build has to be
 served from the same origin as Cockpit, under `bluesim/`. Cockpit's README covers the ArduSub side.
 
 Export it with Godot 4.7 and its Web export templates installed:
