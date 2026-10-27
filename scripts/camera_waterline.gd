@@ -246,6 +246,7 @@ func _ready():
 		surfacing_drops = SurfacingDrops.new()
 		surfacing_drops.name = "SurfacingDrops"
 		surfacing_drops.camera = camera
+		surfacing_drops.waterline = self
 		surfacing_drops.source_viewport = view
 		_add_surfacing_drops.call_deferred(view)
 
