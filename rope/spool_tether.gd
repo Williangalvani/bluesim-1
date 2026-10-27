@@ -18,6 +18,8 @@ extends Node3D
 # The vehicle's own collision shapes (boxes, spheres, capsules, convex hulls as their bounding box, read once from its
 # CollisionShape3D children) push the cable out analytically every sweep, except the first rov_skip_length m next to
 # the attachment; the vehicle gets the reaction (capped at rov_max_force) at the contact, so it can push the cable.
+# Its gripper's claws (rigid bodies jointed to it) do the same where they are moving to, all along the cable, with a
+# contact radius small enough for the cable to sit between the jaws; each claw gets its own reaction.
 # The pull of the first segment is applied to the vehicle at the attachment point. It is drawn as a Catmull-Rom
 # tube, subdivided only where the cable bends and is near the camera.
 
@@ -86,6 +88,11 @@ const G = 9.8
 @export var rov_skip_length := 1.75  # m of cable from the attachment that may touch the hull (it leaves through it)
 @export var rov_friction := 0.3
 @export var rov_max_force := 80.0  # N, cap on the cable's push on the vehicle in one tick
+@export_group("Claws")
+@export var claw_collide := true  # off: the claws are level geometry to the queries (one way, planes cached)
+@export var claw_contact_radius := 0.012  # m: the cable's radius and a skin, so it fits between the jaws
+@export var claw_friction := 0.3
+@export var claw_max_force := 40.0  # N, cap on the cable's push on each claw in one tick
 @export_group("Drawing")
 @export var render_subdivisions := 4  # spline points per bent segment near the camera, straight or far ones get 1
 @export var bend_subdivide_deg := 6.0
@@ -165,6 +172,18 @@ var rov_force := Vector3.ZERO  # N on the vehicle from hull contacts, last tick
 var rov_contacts := 0  # particles + segments touching the hull, last tick
 var rov_usec := 0
 var _rov_point := Vector3.ZERO
+var claws: Array[RigidBody3D] = []
+var claw_force: Array[Vector3] = []  # N on each claw from the cable, last tick
+var claw_contacts := 0  # particles + segments touching a claw, last tick
+var claw_clearance := INF  # m, from claw_penetration(): the cable's centreline nearest a claw's solid, < 0 inside
+var claw_usec := 0
+var _claw_point: Array[Vector3] = []
+var _cs_claw := PackedInt32Array()  # per claw shape: its claw, then as _rs_* (spheres and capsules as their box)
+var _cs_xf: Array[Transform3D] = []
+var _cs_he := PackedVector3Array()
+var _cs_inv: Array[Transform3D] = []  # world to shape, where the claws are this substep
+var _cs_basis: Array[Basis] = []
+var _claw_bound := 0.0
 const TOPO_EVENT_COLS = ["tick", "kind", "index", "n_before", "n_after", "rest_a", "rest_b", "rest_c", "chord_off",
 	"stretch_before", "stretch_after", "new_stretch_max", "bend_viol_before", "bend_viol_after", "dpos_max", "dv_max",
 	"dsum_rest", "rest_err", "dke", "dmom", "render_d", "acc_before", "jerk_before", "acc_after", "jerk_after", "stale",
@@ -198,6 +217,7 @@ func _ready():
 		return
 	attach_local = rov.to_local(global_position)
 	_read_rov_shapes()
+	_find_claws()
 	_find_anchor()
 	_brake_lim = brake_tension
 	_bend_min = cos(deg_to_rad(clamp(max_bend_deg, 0.0, 180.0)) / 2)
@@ -255,16 +275,16 @@ func _ready():
 	sphere.radius = contact_radius + query_margin
 	_query.shape = sphere
 	_query.collision_mask = collision_mask
-	_query.exclude = [rov.get_rid()]
+	_query.exclude = _own_rids()
 	_query_spool = PhysicsShapeQueryParameters3D.new()
 	_query_spool.shape = sphere
 	_query_spool.collision_mask = collision_mask
-	_query_spool.exclude = [rov.get_rid()] + _boat_rids()
+	_query_spool.exclude = _own_rids() + _boat_rids()
 	_capsule = CapsuleShape3D.new()
 	_squery = PhysicsShapeQueryParameters3D.new()
 	_squery.shape = _capsule
 	_squery.collision_mask = collision_mask
-	_squery.exclude = [rov.get_rid()] + _boat_rids()
+	_squery.exclude = _own_rids() + _boat_rids()
 	_build_mesh()
 
 
@@ -309,6 +329,11 @@ func _boat_anchor() -> Node3D:
 	if found == null:
 		found = get_tree().root.find_child("TetherAnchor", true, false) as Node3D
 	return found
+
+
+func _own_rids() -> Array:
+	# the vehicle and, when they push the cable themselves, its claws: the queries leave them out
+	return [rov.get_rid()] + (claws.map(func(c): return c.get_rid()) if claw_collide else [])
 
 
 func _boat_rids() -> Array:
@@ -366,7 +391,7 @@ func _physics_process(delta):
 		if found:
 			anchor_node.queue_free()
 			anchor_node = found
-			_query_spool.exclude = [rov.get_rid()] + _boat_rids()
+			_query_spool.exclude = _own_rids() + _boat_rids()
 			_squery.exclude = _query_spool.exclude
 	if is_instance_valid(anchor_node):
 		anchor = anchor_node.global_position
@@ -388,6 +413,9 @@ func _physics_process(delta):
 	rov.apply_force(force, attach_point() - rov.global_position)
 	if rov_force != Vector3.ZERO:
 		rov.apply_force(rov_force, _rov_point - rov.global_position)
+	for c in range(claw_force.size()):
+		if claw_force[c] != Vector3.ZERO:
+			claws[c].apply_force(claw_force[c], _claw_point[c] - claws[c].global_position)
 
 
 func _query_contacts():
@@ -549,14 +577,50 @@ func _query_segment(space: PhysicsDirectSpaceState3D, j: int):
 
 
 func _read_rov_shapes():
-	_rov_shapes.clear()
+	_rov_shapes = _read_shapes(rov)
 	_rs_kind.clear()
 	_rs_inv.clear()
 	_rs_basis.clear()
 	_rs_he.clear()
 	_rs_hs.clear()
 	_rov_bound = 0.0
-	for c in rov.get_children():
+	for entry in _rov_shapes:
+		_rs_kind.append(entry[0])
+		_rs_inv.append(entry[4])
+		_rs_basis.append(entry[1].basis)
+		_rs_he.append(entry[2])
+		_rs_hs.append(entry[3])
+		_rov_bound = max(_rov_bound, entry[1].origin.length() + entry[2].length() + entry[3])
+
+
+func _find_claws():
+	# the gripper's claws: rigid bodies that a joint next to the vehicle ties to it (lClaw, rClaw on the heavy)
+	var parent := rov.get_parent()
+	for j in (parent.get_children() if parent else []):
+		if not (j is Joint3D):
+			continue
+		var a = j.get_node_or_null(j.node_a)
+		var b = j.get_node_or_null(j.node_b)
+		var claw = b if a == rov else (a if b == rov else null)
+		if not (claw is RigidBody3D) or claws.has(claw):
+			continue
+		for entry in _read_shapes(claw):
+			_cs_claw.append(claws.size())
+			_cs_xf.append(entry[1])
+			_cs_he.append(entry[2] if entry[0] == 0 else Vector3(entry[2].x, entry[2].x + entry[3], entry[2].x))
+			_cs_inv.append(entry[4])
+			_cs_basis.append(entry[1].basis)
+			_claw_bound = max(_claw_bound, entry[1].origin.length() + entry[2].length() + entry[3])
+		claws.append(claw)
+		claw_force.append(Vector3.ZERO)
+		_claw_point.append(Vector3.ZERO)
+
+
+func _read_shapes(body: Node) -> Array:
+	# a body's CollisionShape3D children as [kind (0 box, 1 sphere, 2 capsule), shape transform in the body, half
+	# extents / radius, half segment, the transform's inverse]; cylinders and convex hulls as their (local) box
+	var out := []
+	for c in body.get_children():
 		if not (c is CollisionShape3D) or c.disabled or c.shape == null:
 			continue
 		var sh: Shape3D = c.shape
@@ -583,13 +647,8 @@ func _read_rov_shapes():
 		entry[2] = entry[2] * sc
 		entry[3] = entry[3] * sc.y
 		entry.append(entry[1].affine_inverse())
-		_rov_shapes.append(entry)
-		_rs_kind.append(entry[0])
-		_rs_inv.append(entry[4])
-		_rs_basis.append(entry[1].basis)
-		_rs_he.append(entry[2])
-		_rs_hs.append(entry[3])
-		_rov_bound = max(_rov_bound, entry[1].origin.length() + entry[2].length() + entry[3])
+		out.append(entry)
+	return out
 
 
 var _rc_d := 0.0  # _rov_closest's answer: signed distance and outward normal (body frame)
@@ -636,6 +695,70 @@ func _rov_closest(q: Vector3) -> void:
 			best_n = _rs_basis[si] * nl
 	_rc_d = best_d
 	_rc_n = best_n
+
+
+func _claw_pose(xfs: Array[Transform3D]):
+	# the claw shapes' world frames, for claws at xfs
+	for si in range(_cs_claw.size()):
+		var w: Transform3D = xfs[_cs_claw[si]] * _cs_xf[si]
+		_cs_inv[si] = w.affine_inverse()
+		_cs_basis[si] = w.basis
+
+
+func _claw_seg(si: int, pa: Vector3, d: Vector3, oa: Vector3, od: Vector3) -> float:
+	# segment pa + d t against claw box si: its nearest point (alternate projections, the box is convex) into _rc_*,
+	# world frame. Through the box it goes out across itself (along itself it would stay in), the shortest way back to
+	# the side where it was, oa + od t: the plates are thinner than a tick's slide, and the near side can be the far one
+	var he: Vector3 = _cs_he[si]
+	var a: Vector3 = _cs_inv[si] * pa
+	var dl: Vector3 = _cs_inv[si].basis * d
+	var dd := dl.length_squared()
+	var t := clampf(-a.dot(dl) / dd, 0.0, 1.0) if dd > 1e-10 else 0.0
+	var q := a + dl * t
+	for kk in range(3):
+		if q.clamp(-he, he) == q or dd <= 1e-10:
+			break
+		t = clampf((q.clamp(-he, he) - a).dot(dl) / dd, 0.0, 1.0)
+		q = a + dl * t
+	var c := q.clamp(-he, he)
+	if c != q:
+		_rc_d = (q - c).length()
+		_rc_n = _cs_basis[si] * ((q - c) / _rc_d)
+		return t
+	_rc_d = INF
+	var ol: Vector3 = _cs_inv[si] * (oa + od * t)
+	for k in range(3):
+		var ax: Vector3 = dl.cross(Basis.IDENTITY[k]) if dd > 1e-10 else Basis.IDENTITY[k]
+		if ax.length_squared() < 1e-6 * maxf(dd, 1.0):
+			continue
+		ax = ax.normalized()
+		if ax.dot(ol) < 0.0:
+			ax = -ax
+		var o := absf(ax.x) * he.x + absf(ax.y) * he.y + absf(ax.z) * he.z - ax.dot(q)
+		if o < _rc_d:
+			_rc_d = o
+			_rc_n = _cs_basis[si] * ax
+	_rc_d = -_rc_d
+	return t
+
+
+func claw_penetration() -> float:
+	# how deep the cable's centreline is inside a claw (m, 0 if clear); claw_clearance gets the signed distance
+	claw_clearance = INF
+	var xfs: Array[Transform3D] = []
+	var mid := Vector3.ZERO
+	for c in claws:
+		xfs.append(c.global_transform)
+		mid += c.global_position / claws.size()
+	_claw_pose(xfs)
+	for j in range(1, x.size() - 2):  # not the attachment segment, nor the spool's
+		var d: Vector3 = x[j + 1] - x[j]
+		var t: float = clamp((mid - x[j]).dot(d) / maxf(d.length_squared(), 1e-10), 0.0, 1.0)
+		if (x[j] + d * t).distance_to(mid) < _claw_bound + 0.3:
+			for si in range(_cs_claw.size()):
+				_claw_seg(si, x[j], d, x[j], d)
+				claw_clearance = min(claw_clearance, _rc_d)
+	return max(0.0, -claw_clearance)
 
 
 func rov_penetration() -> float:
@@ -729,6 +852,39 @@ func _solve(dt):
 	rov_nrm.resize(rov_p.size())
 	var rov_st := PackedFloat32Array()
 	rov_st.resize(rov_s.size())
+	# the claws: segments passing near them (an end touching is that particle), all but the attachment's and the spool's
+	var cl_s := PackedInt32Array()
+	var cl_xf: Array[Transform3D] = []
+	var cl_com := PackedVector3Array()
+	var cl_v := PackedVector3Array()
+	var cl_w := PackedVector3Array()
+	var mid := Vector3.ZERO
+	var cl_t0 := Time.get_ticks_usec()
+	if claw_collide and not _cs_claw.is_empty():
+		var reach: float = _claw_bound + claw_contact_radius + 0.15
+		for c in claws:
+			var st := PhysicsServer3D.body_get_direct_state(c.get_rid())
+			cl_xf.append(c.global_transform)
+			cl_com.append(c.global_position + (st.center_of_mass if st else Vector3.ZERO))
+			cl_v.append(c.linear_velocity)
+			cl_w.append(c.angular_velocity)
+			mid += c.global_position / claws.size()
+			reach += c.linear_velocity.length() * dt
+		for j in range(1, n - 1):
+			var sd: Vector3 = x[j + 1] - x[j]
+			var tt: float = clamp((mid - x[j]).dot(sd) / max(sd.length_squared(), 1e-10), 0.0, 1.0)
+			if (x[j] + sd * tt).distance_to(mid) < reach:
+				cl_s.append(j)
+	var cl_pn := PackedFloat32Array()
+	cl_pn.resize(cl_s.size() * _cs_claw.size())
+	var cl_imp := PackedVector3Array()
+	cl_imp.resize(cl_xf.size())
+	var cl_pt := PackedVector3Array()
+	cl_pt.resize(cl_xf.size())
+	var cl_ptw := PackedFloat64Array()
+	cl_ptw.resize(cl_xf.size())
+	var cl_cnt := 0
+	var cl_us := Time.get_ticks_usec() - cl_t0
 	var tension_sum := 0.0
 	var spool_sum := 0.0
 	var paid := 0.0
@@ -768,6 +924,27 @@ func _solve(dt):
 		c_dn.resize(contact_list.size())
 		var s_dn := PackedFloat32Array()
 		s_dn.resize(seg_list.size())
+		var tau := h * (s + 1)
+		# claw contacts at the sweeps' start, held by them as planes: [k, segment, normal, point on the claw]
+		var cl_c := []
+		if cl_s.size():
+			var tc0 := Time.get_ticks_usec()
+			# the claws where they will be at the end of this substep: turned about their centre of mass, and moved
+			var adv: Array[Transform3D] = []
+			for c in range(cl_xf.size()):
+				var wl := cl_w[c].length()
+				var r := Basis(cl_w[c] / wl, wl * tau) if wl > 1e-9 else Basis.IDENTITY
+				var o: Vector3 = cl_com[c] + cl_v[c] * tau + r * (cl_xf[c].origin - cl_com[c])
+				adv.append(Transform3D(r * cl_xf[c].basis, o))
+			_claw_pose(adv)
+			cl_pn.fill(0.0)
+			for sk in range(cl_s.size()):
+				for si in range(_cs_claw.size()):
+					var j: int = cl_s[sk]
+					var t := _claw_seg(si, p[j], p[j + 1] - p[j], x[j], x[j + 1] - x[j])
+					if _rc_d < claw_contact_radius:
+						cl_c.append([sk * _cs_claw.size() + si, j, _rc_n, p[j].lerp(p[j + 1], t) - _rc_n * _rc_d])
+			cl_us += Time.get_ticks_usec() - tc0
 		for it in range(iterations):
 			var forward := it % 2 == 0
 			for k in range(n):
@@ -843,6 +1020,24 @@ func _solve(dt):
 					p[j] += nn * (lam * w1)
 					p[j + 1] += nn * (lam * w2)
 					s_dn[si] += -pen
+			for e in cl_c:
+				# the claws' too: else a taut cable is pulled deeper into a claw each sweep than its plates are thick
+				var j: int = e[1]
+				var nn: Vector3 = e[2]
+				var d: Vector3 = p[j + 1] - p[j]
+				var t: float = clamp((e[3] - p[j]).dot(d) / maxf(d.length_squared(), 1e-10), 0.0, 1.0)
+				var pen: float = claw_contact_radius - (p[j] + d * t - e[3]).dot(nn)
+				var w1: float = inv_m[j] * (1.0 - t)
+				var w2: float = inv_m[j + 1] * t
+				var den := w1 * (1.0 - t) + w2 * t
+				if pen > 0.0 and den > 0.0:
+					var c: int = _cs_claw[e[0] % _cs_claw.size()]
+					p[j] += nn * (pen * w1 / den)
+					p[j + 1] += nn * (pen * w2 / den)
+					cl_pn[e[0]] += pen
+					cl_imp[c] += nn * (pen / den)
+					cl_pt[c] += (p[j] + d * t) * pen
+					cl_ptw[c] += pen
 		if rov_p.size() or rov_s.size():
 			var tr0 := Time.get_ticks_usec()
 			# (after the sweeps' other constraints, a few times so the hull wins over a taut cable)
@@ -936,6 +1131,47 @@ func _solve(dt):
 						p[i] -= fr
 						rov_imp -= fr / inv_m[i]
 			rov_us += Time.get_ticks_usec() - tr0
+		if cl_s.size():
+			var tc0 := Time.get_ticks_usec()
+			for sk in range(cl_s.size()):
+				for si in range(_cs_claw.size()):
+					# the segment's point nearest each claw box is pushed out, shared by its ends by where along it is
+					var j: int = cl_s[sk]
+					var k := sk * _cs_claw.size() + si
+					var pa: Vector3 = p[j]
+					var d: Vector3 = p[j + 1] - pa
+					var t := _claw_seg(si, pa, d, x[j], x[j + 1] - x[j])
+					var pen: float = claw_contact_radius - _rc_d
+					var w1: float = inv_m[j] * (1.0 - t)
+					var w2: float = inv_m[j + 1] * t
+					var den := w1 * (1.0 - t) + w2 * t
+					if (pen <= 0.0 and cl_pn[k] <= 0.0) or den <= 0.0 \
+							or (t <= 0.0 and sk > 0 and cl_s[sk - 1] == j - 1):
+						continue  # (a particle between two of them is the earlier one's)
+					var c: int = _cs_claw[si]
+					var corr: Vector3 = _rc_n * (maxf(pen, 0.0) / den)
+					cl_pn[k] += maxf(pen, 0.0)
+					if claw_friction > 0.0:
+						# then Coulomb against the claw's own motion, at the touching point
+						var at: Vector3 = pa + d * t
+						var cv: Vector3 = cl_v[c] + cl_w[c].cross(at - cl_com[c] - cl_v[c] * tau)
+						var rel: Vector3 = at - x[j].lerp(x[j + 1], t) - cv * h
+						var tang := rel - _rc_n * rel.dot(_rc_n)
+						var tl := tang.length()
+						if tl > 1e-9:
+							corr -= tang * (min(1.0, claw_friction * cl_pn[k] / tl) / den)
+					p[j] += corr * w1
+					p[j + 1] += corr * w2
+					cl_imp[c] += corr
+					cl_pt[c] += (pa + d * t) * maxf(pen, 0.0)
+					cl_ptw[c] += maxf(pen, 0.0)
+					if s == substeps - 1:
+						cl_cnt += 1
+					if s == 0 and t > 0.0 and t < 1.0 and rest[j] >= 2.0 * bend_spacing:
+						_rov_split.append([j, t, bend_spacing])
+					far_ticks[j] = 0
+					far_ticks[j + 1] = 0
+			cl_us += Time.get_ticks_usec() - tc0
 		if friction > 0.0:
 			# Coulomb friction, once the sweeps are done: what slid along a surface this substep is taken back, up to
 			# friction x how far that surface pushed out (static friction holds it, past that it slides)
@@ -1013,6 +1249,12 @@ func _solve(dt):
 	_rov_point = rov_pt_sum / rov_pt_w if rov_pt_w > 0.0 else rov_xf.origin
 	rov_contacts = rov_cnt
 	rov_usec = rov_us
+	claw_contacts = cl_cnt
+	claw_usec = cl_us
+	claw_force.fill(Vector3.ZERO)
+	for c in range(cl_imp.size()):
+		claw_force[c] = (-cl_imp[c] / (h * dt)).limit_length(claw_max_force)
+		_claw_point[c] = cl_pt[c] / cl_ptw[c] if cl_ptw[c] > 0.0 else cl_xf[c].origin
 	if fixed_count and paid != 0.0:
 		_update_masses()
 	tension = tension_sum / substeps
@@ -1118,8 +1360,8 @@ func _adapt():
 	var changes := 0
 	var n := rest.size()
 	if adaptive and not _rov_split.is_empty():
-		# touching the hull: split there (highest index first, so the others stay valid; before the splits below, as
-		# the indices are from the solve)
+		# touching the hull or a claw: split there (highest index first, so the others stay valid; before the
+		# splits below, as the indices are from the solve)
 		_rov_split.sort_custom(func(a, b): return a[0] > b[0])
 		var last := -1
 		for e in _rov_split:
@@ -1127,12 +1369,14 @@ func _adapt():
 			if j == last or changes >= topology_changes_per_tick or x.size() >= max_total_particles or j >= n - 1:
 				continue
 			last = j
-			var lo := near_spacing / rest[j]
+			var piece: float = e[2] if e.size() > 2 else near_spacing  # (a claw gives its own)
+			var lo := piece / rest[j]
 			var t: float = clamp(e[1], lo, 1.0 - lo)
-			if rest[j] < 2.0 * near_spacing:
+			if rest[j] < 2.0 * piece:
 				continue
 			var r: float = rest[j]
-			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t), "split_rov")
+			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t),
+				"split_claw" if e.size() > 2 else "split_rov")
 			changes += 1
 			splits += 1
 			n += 1
@@ -1417,7 +1661,7 @@ func _lg_before(i: int, kind: String, ins: bool, pos: Vector3, rest_a: float, re
 		sr += r
 	var en := _lg_energy()
 	var stale := 0
-	if kind == "split_rov":
+	if kind in ["split_rov", "split_claw"]:
 		for ev in _lg_tick_events:
 			stale |= int(ev <= i)
 	_lg_pre = {"kind": kind, "i": i, "n": n, "ins": ins, "vel": vel, "at": at, "mass": mass, "nb_st": nb_st, "a_b": a_b, "j_b": j_b, "off": off,
