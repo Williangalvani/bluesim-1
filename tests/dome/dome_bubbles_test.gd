@@ -4,7 +4,10 @@ extends Node
 ## Args after `--`: out=DIR (default user://dome_bubbles), hold=S (wait S seconds after each shot), seed=N (where the
 ## bubbles land), count=N (the particles' amount), fill=S (seconds of bubbles blown onto the dome before each shot),
 ## p=NAME:VALUE[,NAME:VALUE] (shader parameters, to tune them), bench=1 (frame times with the bubbles shown and hidden
-## instead of screenshots), frames=N (per bench run).
+## instead of screenshots), frames=N (per bench run), yaw=S (instead, the ROV turned a full circle in place in S seconds
+## with the bubbles held still, a screenshot every 45 degrees; the same frames each run with --fixed-fps and
+## --write-movie), depth=M (of the camera for yaw, default 1.5), heading=DEG (where the turn starts, degrees about the
+## world's up axis, default 0).
 var rov: RigidBody3D
 var cam: Camera3D
 var bubbles: GPUParticles3D
@@ -16,6 +19,13 @@ var fill_s := 6.0
 var bench := false
 var bench_frames := 600
 var params := {}
+var yaw_s := 0.0
+var yaw_depth := 1.5
+var yaw_heading := 0.0
+var yawing := false
+var yaw_elapsed := 0.0
+var yaw_start: Transform3D
+var yaw_center: Vector3
 var base_pos: Vector3
 var hold: Transform3D
 var holding := false
@@ -43,6 +53,12 @@ func _enter_tree():
 			bench = a.substr(6) not in ["0", "false"]
 		elif a.begins_with("frames="):
 			bench_frames = int(a.substr(7))
+		elif a.begins_with("yaw="):
+			yaw_s = float(a.substr(4))
+		elif a.begins_with("depth="):
+			yaw_depth = float(a.substr(6))
+		elif a.begins_with("heading="):
+			yaw_heading = float(a.substr(8))
 		elif a.begins_with("p="):
 			for kv in a.substr(2).split(","):
 				var parts = kv.split(":")
@@ -91,6 +107,8 @@ func _ready():
 	cam.current = true
 	if bench:
 		await _bench()
+	elif yaw_s > 0:
+		await _yaw()
 	else:
 		await _run()
 	get_tree().quit()
@@ -108,12 +126,12 @@ func _find_bubbles() -> GPUParticles3D:
 	return null
 
 
-# the camera depth m below the surface, pitched up by pitch degrees, at a fixed heading
-func _place(depth: float, pitch := 0.0):
+# the camera depth m below the surface, pitched up by pitch degrees, turned by yaw degrees about the world's up axis
+func _place(depth: float, pitch := 0.0, yaw := 0.0):
 	if "camera_tilt" in rov:
 		rov.camera_tilt = 0.0
 	cam.rotation.x = 0.0
-	var cam_basis = Basis.from_euler(Vector3(deg_to_rad(pitch), 0, 0))
+	var cam_basis = Basis(Vector3.UP, deg_to_rad(yaw)) * Basis.from_euler(Vector3(deg_to_rad(pitch), 0, 0))
 	var rov_basis = cam_basis * cam.transform.basis.inverse()
 	var cam_pos = Vector3(base_pos.x, Globals.surface_altitude - depth, base_pos.z)
 	hold = Transform3D(rov_basis, cam_pos - rov_basis * cam.transform.origin)
@@ -128,6 +146,16 @@ func _physics_process(_delta):
 		rov.angular_velocity = Vector3.ZERO
 	if blowing:
 		bubbles.blow(1.0)
+
+
+# by the frame's time, so a movie at a fixed frame rate turns the same each run; about the camera, which stays put
+func _process(delta):
+	if yawing:
+		yaw_elapsed = minf(yaw_elapsed + delta, yaw_s)
+		var turn := deg_to_rad(360.0 * yaw_elapsed / yaw_s)
+		hold = yaw_start.translated(-yaw_center).rotated(Vector3.UP, turn).translated(yaw_center)
+		# now too, as the physics step that holds it there has already run this frame
+		rov.global_transform = hold
 
 
 # the same bubbles each time: as many as fill_s seconds of blowing leave on the dome, then held still
@@ -182,6 +210,33 @@ func _run():
 	rov.set_spotlights_energy(5)
 	await _shot("down30_3m_lights_on")
 	rov.set_spotlights_energy(light_energy)
+
+
+# the bubbles held still on the dome while the ROV turns a full circle, a screenshot at each eighth of the turn
+func _yaw():
+	_place(yaw_depth, 0.0, yaw_heading)
+	await _cover_dome()
+	for i in 20:
+		await get_tree().process_frame
+	yaw_start = hold
+	yaw_center = hold * cam.transform.origin
+	yaw_elapsed = 0.0
+	var step := yaw_s / 8
+	var eighth := 0
+	while eighth <= 8:
+		await RenderingServer.frame_post_draw
+		# the first frame drawn at or past each eighth, the last being the full turn
+		while eighth <= 8 and yaw_elapsed >= eighth * step - 0.0001:
+			print("BUBBLES yaw t=%.2f heading=%.1f" % [yaw_elapsed, yaw_heading + 360.0 * yaw_elapsed / yaw_s])
+			if eighth < 8:
+				var p = out.path_join("yaw_%03d.png" % (eighth * 45))
+				get_viewport().get_texture().get_image().save_png(p)
+				print("BUBBLES shot ", p)
+			eighth += 1
+		yawing = true
+	yawing = false
+	for i in 10:
+		await get_tree().process_frame
 
 
 func _bench():
