@@ -15,6 +15,12 @@ const VENTILATION_DEPTH = 0.1  # m
 
 var udp = PacketPeerUDP.new()  # UDP socket for fdm in (server)
 var peer = false
+
+# In browsers there is no UDP, the SITL runs in Cockpit (sitl:// connection) and talks over this channel
+const WEB_CHANNEL_NAME = "cockpit-sitl-json"
+var web_channel: JavaScriptObject
+var web_on_message: JavaScriptObject  # must stay referenced, or the callback is freed
+var web_pwm = []
 var start_time = Time.get_ticks_msec()
 
 var last_velocity = Vector3(0, 0, 0)
@@ -35,8 +41,24 @@ var camera_tilt = 0.0  # degrees
 @onready var ping1d = $ping1d
 
 func connect_fmd_in():
+	if Globals.isHTML5:
+		# ?channel=ID gives each Cockpit tab its own channel, older Cockpits don't pass one
+		var channel_id = JavaScriptBridge.eval("new URLSearchParams(location.search).get('channel')?.match(/^[A-Za-z0-9_-]{1,64}$/)?.[0] ?? ''")
+		var channel_name = WEB_CHANNEL_NAME + ("-" + channel_id if channel_id else "")
+		web_channel = JavaScriptBridge.create_object("BroadcastChannel", channel_name)
+		web_on_message = JavaScriptBridge.create_callback(_on_web_message)
+		web_channel.onmessage = web_on_message
+		return
 	if udp.bind(9002) != OK:
 		print("Failed to connect fdm_in")
+
+
+func _on_web_message(args):
+	var message = JSON.parse_string(str(args[0].data))
+	if typeof(message) != TYPE_DICTIONARY or not message.has("pwm"):
+		return
+	web_pwm = message["pwm"]
+	peer = true
 
 
 func actuate_servos(pwms):
@@ -49,6 +71,10 @@ func actuate_servos(pwms):
 
 
 func get_servos():
+	if Globals.isHTML5:
+		# messages arrive between physics ticks, keep applying the latest outputs
+		actuate_servos(web_pwm)
+		return
 	if udp.get_available_packet_count() == 0:
 		return
 
@@ -125,6 +151,9 @@ func send_fdm():
 
 	}
 	var JSON_string = "\n" + JSON.stringify(JSON_fmt) + "\n"
+	if Globals.isHTML5:
+		web_channel.postMessage(JSON_string)
+		return
 	buffer.put_utf8_string(JSON_string)
 	udp.put_packet(buffer.data_array)
 
@@ -182,9 +211,8 @@ func _ready():
 		Globals.active_vehicle = self
 	else:
 		return
-	if not Globals.isHTML5:
-		print("connecting fdm...")
-		connect_fmd_in()
+	print("connecting fdm...")
+	connect_fmd_in()
 	print("init done")
 	print(is_inside_tree())
 
@@ -194,9 +222,6 @@ func _physics_process(delta):
 		return
 	phys_time = phys_time + 1.0 / Globals.physics_rate
 	process_keys()
-	if Globals.isHTML5:
-		print("html5")
-		return
 	calculated_acceleration = (self.linear_velocity - last_velocity) / delta
 	calculated_acceleration -= get_gravity() * gravity_scale
 	last_velocity = self.linear_velocity
