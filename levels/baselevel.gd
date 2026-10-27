@@ -2,6 +2,7 @@ extends Control
 
 # in metres; the water fog hides anything further away, and each shadow split redraws every multimesh whole
 const SUN_SHADOW_DISTANCE = 30
+const LEVEL_GOD_RAYS = preload("res://scripts/fx/level_god_rays.gdshader")
 
 # the web build boots straight into this scene, so the page URL picks the level the menu would; this runs before
 # the vehicle's _ready, which only connects to the autopilot once it is the active vehicle, and before Globals' _ready
@@ -30,3 +31,23 @@ func _ready():
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 		sun.directional_shadow_max_distance = min(sun.directional_shadow_max_distance, SUN_SHADOW_DISTANCE)
 	add_child(level)
+	_use_bluesim_god_rays(level)
+
+
+# a level's light shafts (the reef's UnderwaterFX/GodRays) start at the surface it was built with, and were drawn before
+# BlueSim's water, which hid them wherever its underside is in view; redraw them from BlueSim's surface, over the water
+func _use_bluesim_god_rays(level: Node):
+	for rays in level.find_children("GodRays", "GeometryInstance3D", true, false):
+		var old = rays.material_override
+		if not old is ShaderMaterial:
+			continue
+		var m = ShaderMaterial.new()
+		m.shader = LEVEL_GOD_RAYS
+		m.render_priority = 1
+		for p in ["tint", "strength", "near_fade_begin", "near_fade_end", "far_fade_begin", "far_fade_end"]:
+			var v = old.get_shader_parameter(p)
+			if v != null:
+				m.set_shader_parameter(p, v)
+		m.set_shader_parameter("surface_y", Globals.surface_altitude)
+		m.set_shader_parameter("floor_y", (rays.global_transform * rays.get_aabb()).position.y)
+		rays.material_override = m
