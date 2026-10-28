@@ -34,7 +34,8 @@ extends Node
 #   pen_every=N (frames) measures how much of the tether is inside solids: a ray each way along every segment.
 #   With ret=S it then drives back towards the spool at half thrust for S s (try with reel=1).
 # topolog=1 logs every split/merge/payout and per-tick motion (spool_tether.gd topology_log) into
-#   topolog_out.events.csv and topolog_out.ticks.csv (topolog_out: a path prefix, default user://topolog).
+#   topolog_out.events.csv and topolog_out.ticks.csv (topolog_out: a path prefix, default user://topolog), and the
+#   per-tick tension and vehicle accelerations (tick_jitter's samples) into topolog_out.tension.csv.
 # boat=1 (default) puts the support boat (vehicles/boat) boat_at m astern; boat=0 uses the tether's placeholder spool.
 # tether=pbd swaps in the old fixed-length rope for comparison; tether=none flies with no tether.
 # Tether exports are set from the keys in KEYS. secs caps the run. cam=chase|wide|spool|pillar picks the camera, and
@@ -146,6 +147,16 @@ var drag := {"slip_at": -1.0}
 var grip_ev := {"engaged_at": -1.0, "engaged_in": "", "snap": -1.0, "released_at": -1.0, "slipped_at": -1.0}
 var _was_gripping := false
 var max_stretch := 0.0  # m, drawn minus paid-out length, worst 0.5 s sample
+# per tick after the settle (read only): physics frame, t, state, tension (N at the vehicle), the vehicle's linear and
+# angular acceleration (m/s^2, rad/s^2, from the velocity change over the tick); summed up in tick_jitter
+var _jit_tick := PackedInt64Array()
+var _jit_t := PackedFloat64Array()
+var _jit_state := PackedStringArray()
+var _jit_tens := PackedFloat64Array()
+var _jit_acc := PackedFloat64Array()
+var _jit_ang := PackedFloat64Array()
+var _jit_v := Vector3.INF
+var _jit_w := Vector3.ZERO
 
 
 func _p(key, default):
@@ -971,6 +982,17 @@ func _physics_process(delta):
 	if claw_run and "claw_force" in tether and not state in ["settle", "route", "pull"]:
 		_claw_tick()
 	var tens = tether.tension
+	var v: Vector3 = rov.linear_velocity
+	var w: Vector3 = rov.angular_velocity
+	if t > 2.0 and _jit_v.is_finite():
+		_jit_tick.append(Engine.get_physics_frames())
+		_jit_t.append(t)
+		_jit_state.append(state)
+		_jit_tens.append(tens)
+		_jit_acc.append((v - _jit_v).length() / delta)
+		_jit_ang.append((w - _jit_w).length() / delta)
+	_jit_v = v
+	_jit_w = w
 	if tens > peak_tension:
 		peak_tension = tens
 		peak_at = t
@@ -1263,6 +1285,101 @@ static func _stats(a: Array, step := 0.1) -> Dictionary:
 	return {"mean": snapped(sum / b.size(), step), "p50": b[b.size() / 2], "p95": b[int(b.size() * 0.95)], "max": b[-1], "n": b.size()}
 
 
+static func _p99(a: PackedFloat64Array) -> float:
+	if a.is_empty():
+		return 0.0
+	a.sort()
+	return a[min(a.size() - 1, int(a.size() * 0.99))]
+
+
+static func _hf_residual(x: PackedFloat64Array, half: int) -> PackedFloat64Array:
+	# x minus its centred moving average over 2 * half + 1 ticks (prefix sums); 0 where the window runs off either end
+	var n := x.size()
+	var c := PackedFloat64Array()
+	c.resize(n + 1)
+	c[0] = 0.0
+	for i in range(n):
+		c[i + 1] = c[i] + x[i]
+	var r := PackedFloat64Array()
+	r.resize(n)
+	r.fill(0.0)
+	for i in range(half, n - half):
+		r[i] = x[i] - (c[i + half + 1] - c[i - half]) / (2 * half + 1)
+	return r
+
+
+static func _hf_stats(r: PackedFloat64Array, idx: PackedInt32Array, half: int, p2p: bool) -> Dictionary:
+	var sq := 0.0
+	var lo := INF
+	var hi := -INF
+	var mag := PackedFloat64Array()
+	for i in idx:
+		if i < half or i >= r.size() - half:
+			continue
+		sq += r[i] * r[i]
+		lo = min(lo, r[i])
+		hi = max(hi, r[i])
+		mag.append(absf(r[i]))
+	var d = {"hf_rms": snapped(sqrt(sq / mag.size()), 1e-5) if mag.size() else 0.0, "hf_p99": snapped(_p99(mag), 1e-5)}
+	if p2p:
+		d["p2p_hf"] = snapped(hi - lo, 1e-5) if mag.size() else 0.0
+	return d
+
+
+func _tick_jitter() -> Dictionary:
+	# over steady (out, t > 12 s, until 2 s before the spool runs out) and all (after the settle): the tension's mean,
+	# RMS tick-to-tick change and high-frequency residual (minus a centred ~0.25 s moving average), and the vehicle's
+	# acceleration residuals
+	var n := _jit_tens.size()
+	if n == 0:
+		return {}
+	var hz := Engine.physics_ticks_per_second
+	var half := int(round(0.125 * hz))
+	var res_t := _hf_residual(_jit_tens, half)
+	var res_a := _hf_residual(_jit_acc, half)
+	var res_w := _hf_residual(_jit_ang, half)
+	var out = {"hz": hz, "ma_ticks": 2 * half + 1}
+	for win in ["steady", "all"]:
+		var idx := PackedInt32Array()
+		for i in range(n):
+			if (
+				win == "all"
+				or (_jit_state[i] == "out" and _jit_t[i] > 12.0 and (_full_at < 0 or _jit_t[i] < _full_at - 2.0))
+			):
+				idx.append(i)
+		if idx.is_empty():
+			out[win] = {"n": 0}
+			continue
+		var sum := 0.0
+		var dd := 0.0
+		var nd := 0
+		var acc_raw := PackedFloat64Array()
+		var ang_raw := PackedFloat64Array()
+		for k in range(idx.size()):
+			var i := idx[k]
+			sum += _jit_tens[i]
+			if k > 0 and idx[k - 1] == i - 1:
+				dd += (_jit_tens[i] - _jit_tens[i - 1]) ** 2
+				nd += 1
+			acc_raw.append(_jit_acc[i])
+			ang_raw.append(_jit_ang[i])
+		var tension = {"mean": snapped(sum / idx.size(), 1e-5), "rms_dd": snapped(sqrt(dd / nd), 1e-5) if nd else 0.0}
+		tension.merge(_hf_stats(res_t, idx, half, true))
+		var acc = _hf_stats(res_a, idx, half, false)
+		acc["p99"] = snapped(_p99(acc_raw), 1e-5)
+		var ang = _hf_stats(res_w, idx, half, false)
+		ang["p99"] = snapped(_p99(ang_raw), 1e-5)
+		out[win] = {
+			"n": idx.size(),
+			"t0": snapped(_jit_t[idx[0]], 0.001),
+			"t1": snapped(_jit_t[idx[-1]], 0.001),
+			"tension": tension,
+			"rov_acc": acc,
+			"rov_angacc": ang
+		}
+	return out
+
+
 func _finish():
 	if done:
 		return
@@ -1295,6 +1412,7 @@ func _finish():
 		"claw": _claw_summary() if claw_run and "claw_force" in tether else {},
 		"claw_series": claw_log,
 		"max_stretch": max_stretch, "splits": tether.get("splits") if tether else 0, "merges": tether.get("merges") if tether else 0,
+		"tick_jitter": _tick_jitter(),
 	}
 	if tether and tether.get("x") != null:
 		var drawn = 0.0
@@ -1324,6 +1442,13 @@ func _finish():
 		_write_csv(base + ".events.csv", tether.TOPO_EVENT_COLS, tether.topo_events)
 		_write_csv(base + ".ticks.csv", tether.TOPO_TICK_COLS, tether.topo_ticks)
 		print("SPOOLBENCH topolog events=%d ticks=%d to %s" % [tether.topo_events.size(), tether.topo_ticks.size(), base])
+	if _p("topolog", 0) == 1:
+		var base: String = _p("topolog_out", "user://topolog")
+		var rows := []
+		for i in range(_jit_tens.size()):
+			rows.append([_jit_tick[i], _jit_t[i], _jit_state[i], _jit_tens[i], _jit_acc[i], _jit_ang[i]])
+		_write_csv(base + ".tension.csv", ["tick", "t", "state", "tension", "rov_acc", "rov_angacc"], rows)
+		print("SPOOLBENCH tension log ticks=%d to %s.tension.csv" % [rows.size(), base])
 	var js = JSON.stringify(result)
 	print("SPOOLBENCH " + js)
 	if OS.has_feature("web"):
