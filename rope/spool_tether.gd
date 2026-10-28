@@ -40,7 +40,7 @@ const G = 9.8
 @export var diameter := 0.0076  # m, Fathom slim tether
 @export var buoyancy_ratio := 1.05
 @export var normal_cd := 1.2
-@export var axial_cf := 0.01
+@export var axial_cf := 0.005  # skin friction along the cable (halved from 0.01: it slides along itself more freely)
 @export var compliance_per_m := 1.3e-5  # m/N per m of tether
 @export var max_force := 200.0  # N, the most the tether may pull on the vehicle
 @export_group("Spool")
