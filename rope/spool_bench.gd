@@ -50,7 +50,7 @@ const KEYS = {"max": "max_length", "len0": "initial_length", "sp": "spacing", "f
 	"maxseg": "max_segment", "mtot": "max_total_particles", "rbend": "refine_bend_deg", "cstraight": "cull_straight_deg",
 	"segend": "seg_end_t", "refresh": "contact_refresh_per_tick", "stop": "stop_length",
 	"rovcol": "rov_collide", "rovskip": "rov_skip_length", "rovfric": "rov_friction", "rovmax": "rov_max_force",
-	"buoy": "buoyancy_ratio", "bendr": "min_bend_radius",
+	"buoy": "buoyancy_ratio", "bendr": "min_bend_radius", "cf": "axial_cf", "cd": "normal_cd",
 	"bendsp": "bend_spacing", "claw_collide": "claw_collide", "clawr": "claw_contact_radius", "clawfric": "claw_friction",
 	"clawmax": "claw_max_force", "topolog": "topology_log",
 	"grip": "grip", "grip_r": "grip_radius", "grip_slip": "grip_slip_force",
@@ -145,6 +145,7 @@ var _jaw0 := Vector3.INF
 var drag := {"slip_at": -1.0}
 var grip_ev := {"engaged_at": -1.0, "engaged_in": "", "snap": -1.0, "released_at": -1.0, "slipped_at": -1.0}
 var _was_gripping := false
+var max_stretch := 0.0  # m, drawn minus paid-out length, worst 0.5 s sample
 
 
 func _p(key, default):
@@ -1007,6 +1008,13 @@ func _physics_process(delta):
 	if t >= _next_sample:
 		_next_sample += 0.5
 		var a = tether.get("anchor")
+		# stretch: drawn length past the rest length paid out (the constraints' error), worst over the run
+		var stretch_now := 0.0
+		if tether.get("x") != null:
+			for i in range(tether.x.size() - 1):
+				stretch_now += tether.x[i].distance_to(tether.x[i + 1])
+			stretch_now -= total
+			max_stretch = max(max_stretch, stretch_now)
 		series.append([snapped(t, 0.01), snapped(rov.global_position.distance_to(a), 0.01) if a != null else 0,
 			snapped(total, 0.01), tether.x.size(), snapped(tens, 0.01), snapped(sp if sp != null else 0.0, 0.01),
 			snapped(tether.get("payout_speed") if tether.get("payout_speed") != null else 0.0, 0.001),
@@ -1017,7 +1025,7 @@ func _physics_process(delta):
 			snapped(tether.rov_force.length(), 0.01) if "rov_force" in tether else 0.0,
 			tether.get("rov_contacts"), snapped(rov_pen_now, 0.001), tether.get("rov_usec"),
 			snapped((rov.global_position - start).dot(side0), 0.01), snapped(rov.global_position.y, 0.01),
-			snapped(rov.linear_velocity.length(), 0.01), snapped(bend_r_now, 0.001)])
+			snapped(rov.linear_velocity.length(), 0.01), snapped(bend_r_now, 0.001), snapped(stretch_now, 0.001)])
 
 
 func _process(_delta):
@@ -1286,7 +1294,7 @@ func _finish():
 		"pen": pen, "pen_series": pen_series,
 		"claw": _claw_summary() if claw_run and "claw_force" in tether else {},
 		"claw_series": claw_log,
-		"splits": tether.get("splits") if tether else 0, "merges": tether.get("merges") if tether else 0,
+		"max_stretch": max_stretch, "splits": tether.get("splits") if tether else 0, "merges": tether.get("merges") if tether else 0,
 	}
 	if tether and tether.get("x") != null:
 		var drawn = 0.0
