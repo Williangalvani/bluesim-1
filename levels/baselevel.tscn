@@ -5,7 +5,7 @@
 [ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/InterpolatedCamera.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/targetPos.gd" id="5"]
-[ext_resource type="Script" path="res://levels/tether.gd" id="5_ka5gl"]
+[ext_resource type="Script" path="res://rope/spool_tether.gd" id="5_ka5gl"]
 [ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
@@ -377,8 +377,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.41, 0)
 [node name="tether" type="Node3D" parent="ViewportCamera/SubViewport/BlueRovHeavy"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
-straight_loops = 200
-coiled_loops = 0
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(30, -2.62268e-06, -2.62268e-06, -2.62268e-06, -30, -1.04636e-14, -2.62268e-06, 2.39746e-13, -30, 0, 3.53, 0)
