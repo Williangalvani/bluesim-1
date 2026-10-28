@@ -4,11 +4,17 @@ extends MeshInstance3D
 # vehicle's horizontal plane. Each ping casts a fan of rays across the beam and turns what they hit
 # into echo strength per range bin. The scan feeds the Ping360 HUD panel and, in the web build
 # embedded in Cockpit, a sonar map on Cockpit's map that builds up as the vehicle moves, through the
-# map overlay commands Cockpit takes from the pages it embeds (cockpit PR #3271).
+# map overlay commands Cockpit takes from the pages it embeds (cockpit PR #3271). Every ping is also
+# kept, quantized, in a log the page can read.
 #
 # On the web, ?ping360 in the page URL turns it on, and ping360_range, ping360_gain, ping360_step,
-# ping360_bins, ping360_max_cells and ping360_draw_empty override range_m, gain, angle_step,
-# display_bins, max_map_cells and draw_empty. home=lat,lon places the scan on the map.
+# ping360_bins, ping360_max_cells, ping360_draw_empty and ping360_log_cap override range_m, gain,
+# angle_step, display_bins, max_map_cells, draw_empty and log_cap. home=lat,lon places the scan on
+# the map.
+#
+# window.bluesimPing360Log() returns the log, and the page embedding BlueSim can post it
+# {type: "bluesim:ping360", command: "clear" | "clearLog" | "exportLog", requestId}: "exportLog"
+# is answered with {type: "bluesim:ping360Log", requestId, log}.
 
 # gdlint: ignore=signal-name
 signal updatePing360Display(angle: int, points: Array)
@@ -44,6 +50,26 @@ const FALSE_VALUES := ["0", "false", "off", "no"]
 # echo strengths the map tells apart
 const LEVELS := 16
 const MAP_OPACITY := 0.9
+const COMMAND_TYPE := "bluesim:ping360"
+const LOG_TYPE := "bluesim:ping360Log"
+const LOG_FORMAT := "bluesim-ping360-log/1"
+# the whole numbers of a ping's record, in the order the log packs them, before its bins in "i"
+const RECORD_KEYS := ["k", "t", "a", "r", "g", "n", "lat", "lon", "d", "yaw", "pitch", "roll"]
+const RECORD_UNITS := {
+	"k": "ping number",
+	"t": "ms of simulation since the sonar started",
+	"a": "head angle in gradians, 400 a turn, 0 at the vehicle's forward, clockwise from above",
+	"r": "range in cm",
+	"g": "gain x 100",
+	"n": "range bins",
+	"lat": "transducer latitude in 1e-7 degrees",
+	"lon": "transducer longitude in 1e-7 degrees",
+	"d": "transducer depth below the surface in cm",
+	"yaw": "0.1 degrees, 0 north, clockwise",
+	"pitch": "0.1 degrees, nose up",
+	"roll": "0.1 degrees, right side down",
+	"i": "base64 of a byte per range bin out to the range, echo strength 0..1 as 0..255",
+}
 
 @export_range(1, 50) var range_m := 30.0
 @export var gain := 1.0
@@ -58,6 +84,7 @@ const MAP_OPACITY := 0.9
 @export var map_chunks := 4
 # draws the weakest echoes too, so where the sonar found nothing reads as scanned
 @export var draw_empty := true
+@export var log_cap := 50000  # pings
 
 var head_angle := 0  # gradians
 var pings := 0
@@ -75,12 +102,15 @@ var poster := Callable()
 
 var _active := false
 var _ping_clock := 0.0
+var _clock := 0.0  # s of simulation since the sonar started
 var _palette := PackedStringArray()
 var _web := false
 var _embedded := false
 var _window: JavaScriptObject
 var _parent: JavaScriptObject
 var _json: JavaScriptObject
+# JavaScript can only call back into Godot while these are held
+var _callbacks: Array[JavaScriptObject] = []
 var _publish_clock := 0.0
 var _pending: Array[Dictionary] = []
 # cells on the map in each chunk, empty while there is no map
@@ -92,6 +122,16 @@ var _mapped_pings := 0
 var _mapped_cells := 0
 var _cells_last_ping := 0
 var _last_max := 0.0
+var _last_bins := PackedFloat32Array()
+var _last_time := 0.0
+var _last_pose := {}
+var _last_record := {}
+# the log: a ring of log_cap pings, their whole numbers and their bins packed one after another
+var _log_ints := PackedInt32Array()
+var _log_bins := PackedByteArray()
+var _log_count := 0
+var _log_oldest := 0
+var _log_samples := 0
 
 
 func _init() -> void:
@@ -105,6 +145,7 @@ func _ready() -> void:
 	_web = OS.has_feature("web")
 	if _web:
 		_read_url()
+		_listen()
 
 
 func _physics_process(delta: float) -> void:
@@ -114,12 +155,14 @@ func _physics_process(delta: float) -> void:
 		return
 	if not _active:
 		_start()
+	_clock += delta
 	_ping_clock += delta
 	var period := ping_period()
 	var count := 0
 	while _ping_clock >= period and count < MAX_PINGS_PER_TICK:
 		_ping_clock -= period
-		ping()
+		# it went out _ping_clock ago, partway through this tick
+		ping(_clock - _ping_clock)
 		count += 1
 	# a slow frame skips pings rather than catching up on them later
 	_ping_clock = minf(_ping_clock, period)
@@ -137,16 +180,23 @@ func ping_period() -> float:
 	return maxf(2 * clampf(range_m, 1, 50) / SOUND_SPEED + PING_OVERHEAD, 1 / MAX_PING_RATE)
 
 
-# One ping with the head where it is, which then steps on: shown on the HUD and queued for the map
-func ping() -> void:
+# One ping at `time` s since the sonar started, with the head where it is, which then steps on:
+# shown on the HUD, logged and queued for the map
+func ping(time: float) -> void:
 	var bins := scan(get_world_3d().direct_space_state, global_position, global_basis, head_angle)
 	pings += 1
 	_emit_hud(bins)
 	_last_max = 0.0
 	for value in bins:
 		_last_max = maxf(_last_max, value)
+	var levels := quantize(bins)
+	_last_bins = bins
+	_last_time = time
+	_last_pose = pose()
+	_last_record = ping_record(levels, head_angle, time, _last_pose)
+	log_ping(_last_record, levels)
 	if _publishing():
-		var cells := wedge_cells(bins, head_angle)
+		var cells := wedge_cells(bins, head_angle, _last_record)
 		_pending.append_array(cells)
 		_cells_last_ping = cells.size()
 		_mapped_cells += cells.size()
@@ -225,6 +275,15 @@ static func resample(bins: PackedFloat32Array, count: int) -> PackedFloat32Array
 	return out
 
 
+# A byte per bin, 0..255 for echo strength 0..1
+static func quantize(bins: PackedFloat32Array) -> PackedByteArray:
+	var bytes := PackedByteArray()
+	bytes.resize(bins.size())
+	for b in bins.size():
+		bytes[b] = roundi(clampf(bins[b], 0, 1) * 255)
+	return bytes
+
+
 # Which of the map's LEVELS an echo strength falls in
 static func strength_level(strength: float) -> int:
 	return clampi(int(strength * LEVELS), 0, LEVELS - 1)
@@ -271,6 +330,44 @@ static func world_to_lonlat(position: Vector3, lat0: float, lon0: float) -> Arra
 	return [snappedf(lon, 1e-7), snappedf(lat, 1e-7)]
 
 
+# Where the transducer is and how it is turned: lat and lon in degrees, depth below the surface in
+# m, and yaw, pitch and roll in degrees of its forward-right-down axes in north-east-down, as
+# BlueROV2Heavy.gd gives ArduSub the vehicle's
+func pose() -> Dictionary:
+	var lonlat := _lonlat(global_position)
+	var axes := global_basis.orthonormalized()
+	var surface: float = Globals.surface_altitude
+	return {
+		"lat": lonlat[1],
+		"lon": lonlat[0],
+		"d": surface - global_position.y,
+		# forward is +Z, right -X and down -Y, and north +X, east +Z and down -Y
+		"yaw": fposmod(rad_to_deg(atan2(axes.z.z, axes.z.x)), 360),
+		"pitch": rad_to_deg(asin(clampf(axes.z.y, -1, 1))),
+		"roll": rad_to_deg(atan2(axes.x.y, axes.y.y)),
+	}
+
+
+# What the log and the map keep of a ping: its quantized bins `levels`, at head `angle` and `time`
+# s, from a transducer at `where`, a pose(), all in whole numbers of the units of RECORD_UNITS
+func ping_record(levels: PackedByteArray, angle: int, time: float, where: Dictionary) -> Dictionary:
+	return {
+		"k": pings,
+		"t": roundi(time * 1000),
+		"a": angle,
+		"r": roundi(range_m * 100),
+		"g": roundi(gain * 100),
+		"n": levels.size(),
+		"lat": roundi(float(where.lat) * 1e7),
+		"lon": roundi(float(where.lon) * 1e7),
+		"d": roundi(float(where.d) * 100),
+		"yaw": posmod(roundi(float(where.yaw) * 10), 3600),
+		"pitch": roundi(float(where.pitch) * 10),
+		"roll": roundi(float(where.roll) * 10),
+		"i": Marshalls.raw_to_base64(levels),
+	}
+
+
 # The world direction the head points at `angle` gradians, in the horizontal plane: the sonar's
 # yaw, without its roll and pitch, which the map has no room for
 func horizontal_direction(angle: float) -> Vector3:
@@ -282,9 +379,12 @@ func horizontal_direction(angle: float) -> Vector3:
 
 
 # The map cells of one ping's echoes: a wedge angle_step wide for each run of display bins at the
-# same level out to range_m. They are laid from where the transducer is and the way it is heading
-# now, at the ping, so the map builds up as the vehicle moves and turns.
-func wedge_cells(bins: PackedFloat32Array, angle: float) -> Array[Dictionary]:
+# same level out to range_m, carrying the ping's `record`. They are laid from where the transducer
+# is and the way it is heading now, at the ping, so the map builds up as the vehicle moves and
+# turns.
+func wedge_cells(
+	bins: PackedFloat32Array, angle: float, record: Dictionary = {}
+) -> Array[Dictionary]:
 	var cells: Array[Dictionary] = []
 	var strengths := resample(bins, display_bins)
 	var runs := level_runs(strengths)
@@ -317,6 +417,8 @@ func wedge_cells(bins: PackedFloat32Array, angle: float) -> Array[Dictionary]:
 			"b1": last * bins.size() / display_bins,
 			"v": roundi(loudest * 255),
 		}
+		if not record.is_empty():
+			properties.ping = record
 		cells.append(_feature("Polygon", [ring], properties))
 	return cells
 
@@ -360,10 +462,73 @@ func flush_map() -> void:
 	_pending = []
 
 
+# Adds a ping to the log, its record from ping_record() and its quantized bins, dropping the oldest
+# beyond log_cap
+func log_ping(record: Dictionary, levels: PackedByteArray) -> void:
+	if log_cap <= 0:
+		return
+	if levels.size() != _log_samples or _log_count > log_cap:
+		clear_log()
+		_log_samples = levels.size()
+	if _log_count < log_cap:
+		for key: String in RECORD_KEYS:
+			_log_ints.append(record[key])
+		_log_bins.append_array(levels)
+		_log_count += 1
+		return
+	var slot := _log_oldest
+	_log_oldest = (_log_oldest + 1) % log_cap
+	for j in RECORD_KEYS.size():
+		_log_ints[slot * RECORD_KEYS.size() + j] = record[RECORD_KEYS[j]]
+	for b in _log_samples:
+		_log_bins[slot * _log_samples + b] = levels[b]
+
+
+func clear_log() -> void:
+	_log_ints = PackedInt32Array()
+	_log_bins = PackedByteArray()
+	_log_count = 0
+	_log_oldest = 0
+
+
+# The log, oldest ping first, as window.bluesimPing360Log() gives it
+func ping_log() -> Dictionary:
+	var records := []
+	for n in _log_count:
+		var slot := (_log_oldest + n) % _log_count
+		var record := {}
+		for j in RECORD_KEYS.size():
+			record[RECORD_KEYS[j]] = _log_ints[slot * RECORD_KEYS.size() + j]
+		var levels := _log_bins.slice(slot * _log_samples, (slot + 1) * _log_samples)
+		record.i = Marshalls.raw_to_base64(levels)
+		records.append(record)
+	return {
+		"format": LOG_FORMAT,
+		"home": {"lat": home_lat, "lon": home_lon},
+		"samples": _log_samples if _log_count else samples,
+		"units": RECORD_UNITS,
+		"pings": records,
+	}
+
+
+# Carries out a command from the page embedding BlueSim
+func command(message: Dictionary) -> void:
+	match String(message.get("command", "")):
+		"clear":
+			# with the sonar off there is no map to clear
+			if not _chunk_cells.is_empty():
+				clear_map()
+		"clearLog":
+			clear_log()
+		"exportLog":
+			_post({"type": LOG_TYPE, "requestId": message.get("requestId"), "log": ping_log()})
+
+
 func stats() -> Dictionary:
 	var map_cells := 0
 	for cells in _chunk_cells:
 		map_cells += cells
+	var quantized := 0 if _last_record.is_empty() else JSON.stringify(_last_record).length()
 	return {
 		"pings": pings,
 		"revolutions": revolutions,
@@ -374,8 +539,30 @@ func stats() -> Dictionary:
 		"lastMaxIntensity": snappedf(_last_max, 0.001),
 		"cellsLastPing": _cells_last_ping,
 		"avgCellsPerPing": snappedf(float(_mapped_cells) / maxi(_mapped_pings, 1), 0.01),
+		"logPings": _log_count,
+		"logBytes": _log_ints.size() * 4 + _log_bins.size(),
 		"sentBytes": _sent_bytes,
+		"pingBytesFloatJson": _float_record_bytes(),
+		"pingBytesQuantJson": quantized,
+		"pingBytesBinary": RECORD_KEYS.size() * 4 + _last_bins.size(),
 	}
+
+
+# JSON length of the last ping as it would be without quantizing: float bins and pose
+func _float_record_bytes() -> int:
+	if _last_bins.is_empty():
+		return 0
+	var record := {
+		"k": pings,
+		"t": _last_time,
+		"a": _last_record.a,
+		"r": range_m,
+		"g": gain,
+		"n": _last_bins.size(),
+	}
+	record.merge(_last_pose)
+	record.i = Array(_last_bins)
+	return JSON.stringify(record, "", false, true).length()
 
 
 func _lonlat(position: Vector3) -> Array:
@@ -406,10 +593,52 @@ func _read_url() -> void:
 		max_map_cells = clampi(int(params.ping360_max_cells), 1000, 500000)
 	if params.has("ping360_draw_empty"):
 		draw_empty = String(params.ping360_draw_empty).to_lower() not in FALSE_VALUES
+	if String(params.get("ping360_log_cap", "")).is_valid_int():
+		log_cap = clampi(int(params.ping360_log_cap), 0, 500000)
 	var home := String(params.get("home", "")).split(",")
 	if home.size() >= 2 and home[0].is_valid_float() and home[1].is_valid_float():
 		home_lat = float(home[0])
 		home_lon = float(home[1])
+
+
+# Gives the page window.bluesimPing360Log() and, embedded, takes commands from its parent
+func _listen() -> void:
+	var log_request := JavaScriptBridge.create_callback(_on_log_request)
+	_callbacks.append(log_request)
+	_window.bluesimPing360LogRequest = log_request
+	# Godot's callbacks return nothing to JavaScript, so the log is left for this to pick up
+	var log_function := """
+		window.bluesimPing360Log = function () {
+			window.bluesimPing360LogRequest();
+			const log = window.bluesimPing360LogResult;
+			delete window.bluesimPing360LogResult;
+			return log;
+		};
+		"""
+	JavaScriptBridge.eval(log_function)
+	if not _embedded:
+		return
+	var on_command := JavaScriptBridge.create_callback(_on_command)
+	_callbacks.append(on_command)
+	_window.bluesimPing360Command = on_command
+	var listener := """
+		window.addEventListener("message", (event) => {
+			if (event.source === window.parent && event.data && event.data.type === "%s") {
+				window.bluesimPing360Command(JSON.stringify(event.data));
+			}
+		});
+		"""
+	JavaScriptBridge.eval(listener % COMMAND_TYPE)
+
+
+func _on_log_request(_args: Array) -> void:
+	_window.bluesimPing360LogResult = _json.parse(JSON.stringify(ping_log()))
+
+
+func _on_command(args: Array) -> void:
+	var message: Variant = JSON.parse_string(str(args[0]))
+	if typeof(message) == TYPE_DICTIONARY:
+		command(message)
 
 
 func _publishing() -> bool:
@@ -419,6 +648,7 @@ func _publishing() -> bool:
 func _start() -> void:
 	_active = true
 	_ping_clock = 0.0
+	_clock = 0.0
 	exclude = _vehicle_rids()
 	if _publishing():
 		clear_map()

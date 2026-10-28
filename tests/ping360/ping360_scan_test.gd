@@ -1,6 +1,7 @@
 extends Node
 # Checks the simulated Ping360's scan against a flat floor 3 m under the transducer and a wall 8 m
-# north of it, its placement of the scan on the map and the chunks it keeps the map in.
+# north of it, its placement of the scan on the map, the chunks it keeps the map in and its log of
+# quantized pings.
 #   godot4.7 --headless --path . res://tests/ping360/ping360_scan_test.tscn
 # Prints one line per check and exits non-zero if any fails.
 
@@ -105,7 +106,10 @@ func _run() -> void:
 
 	_check_map(north)
 	_check_runs(north)
+	_check_record()
+	_check_pose()
 	_check_chunks()
+	_check_log()
 	await _set_bodies([floor_body, wall, far_wall], [])
 	_check_turn(north)
 
@@ -182,7 +186,8 @@ func _check_runs(north: Basis) -> void:
 	bins.resize(sonar.samples)
 	for b in bins.size():
 		bins[b] = strengths[b * strengths.size() / sonar.samples]
-	var cells := sonar.wedge_cells(bins, 0)
+	var record := {"k": 1}
+	var cells := sonar.wedge_cells(bins, 0, record)
 	var covered: bool = (
 		cells.size() == expected.size() / 3
 		and cells[0].properties.b0 == 0
@@ -194,14 +199,14 @@ func _check_runs(north: Basis) -> void:
 		if n > 0 and properties.b0 != cells[n - 1].properties.b1:
 			covered = false
 		var colour := "#" + Ping360.level_colour(expected[n * 3 + 2]).to_html(false)
-		if properties.fill != colour:
+		if properties.fill != colour or properties.ping != record:
 			styled = false
 	var spans := cells.map(
 		func(cell: Dictionary) -> Array: return [cell.properties.b0, cell.properties.b1]
 	)
 	_check("map cells, one per run, cover every bin", covered, str(spans))
 	_check(
-		"map cells coloured from the palette",
+		"map cells coloured from the palette, carrying the ping",
 		styled and cells[3].properties.v == 255 and cells[1].properties.v == 133,
 		str(cells.map(func(cell: Dictionary) -> String: return cell.properties.fill))
 	)
@@ -224,6 +229,73 @@ func _check_runs(north: Basis) -> void:
 	)
 	sonar.draw_empty = true
 	sonar.display_bins = display_bins
+	sonar.transform = Transform3D.IDENTITY
+
+
+func _check_record() -> void:
+	var bins := PackedFloat32Array()
+	bins.resize(sonar.samples)
+	# from below silence to beyond saturation
+	for b in bins.size():
+		bins[b] = b / 150.0 - 0.1
+	sonar.pings = 77
+	var record := sonar.ping_record(Ping360.quantize(bins), 123, 1.25, sonar.pose())
+	var decoded := Marshalls.base64_to_raw(record.i)
+	var worst := 0.0
+	for b in mini(decoded.size(), bins.size()):
+		worst = maxf(worst, absf(decoded[b] / 255.0 - clampf(bins[b], 0, 1)))
+	_check(
+		"record bins round-trip",
+		decoded.size() == sonar.samples and worst <= 1.0 / 255,
+		"%d bytes, worst error %.5f, %d base64 chars" % [decoded.size(), worst, record.i.length()]
+	)
+	_check(
+		"record fields",
+		(
+			record.k == 77
+			and record.t == 1250
+			and record.a == 123
+			and record.r == roundi(sonar.range_m * 100)
+			and record.g == roundi(sonar.gain * 100)
+			and record.n == sonar.samples
+		),
+		str(record)
+	)
+
+
+func _check_pose() -> void:
+	var surface: float = Globals.surface_altitude
+	# scaled like the sonar on the vehicle
+	var scale := Vector3.ONE * 0.0614213
+	sonar.transform = Transform3D(Basis.IDENTITY.scaled(scale), Vector3(12.5, surface - 4.2, -7.25))
+	var levels := Ping360.quantize(PackedFloat32Array([0.5]))
+	var record := sonar.ping_record(levels, 0, 0, sonar.pose())
+	var lonlat := Ping360.world_to_lonlat(sonar.global_position, sonar.home_lat, sonar.home_lon)
+	_check(
+		"record position and depth",
+		(
+			record.lat == roundi(lonlat[1] * 1e7)
+			and record.lon == roundi(lonlat[0] * 1e7)
+			and record.d == 420
+		),
+		"%d %d %d, %s" % [record.lat, record.lon, record.d, lonlat]
+	)
+	var attitudes := [
+		["yaw facing east", Basis.IDENTITY, [900, 0, 0]],
+		["yaw facing north", Basis(Vector3.UP, PI / 2), [0, 0, 0]],
+		["yaw facing west", Basis(Vector3.UP, PI), [2700, 0, 0]],
+		["pitch 10 degrees nose up, facing east", Basis(Vector3.RIGHT, -PI / 18), [900, 100, 0]],
+		[
+			"roll 15 degrees right side down, facing east",
+			Basis(Vector3.BACK, PI / 12),
+			[900, 0, 150]
+		],
+	]
+	for attitude: Array in attitudes:
+		sonar.basis = (attitude[1] as Basis).scaled(scale)
+		record = sonar.ping_record(levels, 0, 0, sonar.pose())
+		var got := [record.yaw, record.pitch, record.roll]
+		_check(attitude[0], got == attitude[2], "yaw, pitch, roll %s" % [got])
 	sonar.transform = Transform3D.IDENTITY
 
 
@@ -288,11 +360,79 @@ func _check_chunks() -> void:
 		),
 		"%d on the map, %s" % [total, on_map]
 	)
+
+	posted.clear()
+	sonar.command({"type": "bluesim:ping360", "command": "clear"})
+	var emptied := posted.filter(
+		func(message: Dictionary) -> bool:
+			return (
+				message.type == "cockpit:setMapOverlay"
+				and message.overlay.geojson.features.is_empty()
+			)
+	)
+	sonar.add_map_cells(cells)
+	sonar.flush_map()
+	_check(
+		"clear command empties every chunk and restarts at the first",
+		(
+			emptied.size() == sonar.map_chunks
+			and posted.size() == sonar.map_chunks + 1
+			and posted[-1].id == "bluesim-ping360-map-0"
+			and sonar.stats().mapCells == cells.size()
+		),
+		str(posted.map(func(message: Dictionary) -> String: return message.type))
+	)
 	sonar.max_map_cells = 40000
 	sonar.clear_map()
 
 
-# A whole turn with the floor and both walls in range, published as in Cockpit
+func _check_log() -> void:
+	var posted: Array[Dictionary] = []
+	sonar.poster = func(message: Dictionary) -> void: posted.append(message)
+	sonar.log_cap = 5
+	sonar.clear_log()
+	for n in range(1, 13):
+		sonar.pings = n
+		var levels := PackedByteArray()
+		levels.resize(sonar.samples)
+		levels.fill(n)
+		sonar.log_ping(sonar.ping_record(levels, n, n, sonar.pose()), levels)
+	var pings: Array = sonar.ping_log().pings
+	var numbers := pings.map(func(record: Dictionary) -> int: return record.k)
+	var intact := true
+	for record: Dictionary in pings:
+		var levels := Marshalls.base64_to_raw(record.i)
+		if levels.size() != sonar.samples or levels.count(record.k) != sonar.samples:
+			intact = false
+	var stats := sonar.stats()
+	_check(
+		"log keeps the last log_cap pings, oldest first",
+		(
+			numbers == [8, 9, 10, 11, 12]
+			and intact
+			and stats.logPings == 5
+			and stats.logBytes == 5 * (Ping360.RECORD_KEYS.size() * 4 + sonar.samples)
+		),
+		"%s, %d bytes" % [numbers, stats.logBytes]
+	)
+	sonar.command({"type": "bluesim:ping360", "command": "exportLog", "requestId": "r1"})
+	var reply: Dictionary = posted[-1] if posted else {}
+	_check(
+		"exportLog command answers with the log",
+		(
+			reply.get("type") == "bluesim:ping360Log"
+			and reply.requestId == "r1"
+			and reply.log.format == "bluesim-ping360-log/1"
+			and reply.log.pings.size() == 5
+		),
+		str(reply.keys())
+	)
+	sonar.command({"type": "bluesim:ping360", "command": "clearLog"})
+	_check("clearLog command empties the log", sonar.stats().logPings == 0, "")
+	sonar.log_cap = 50000
+
+
+# A whole turn with the floor and both walls in range, published and logged as in Cockpit
 func _check_turn(north: Basis) -> void:
 	var posted: Array[Dictionary] = []
 	sonar.poster = func(message: Dictionary) -> void: posted.append(message)
@@ -303,21 +443,28 @@ func _check_turn(north: Basis) -> void:
 	sonar.clear_map()
 	var before := sonar.stats()
 	for n in Ping360.GRADIANS:
-		sonar.ping()
+		sonar.ping(n * sonar.ping_period())
 		if n % 4 == 3:
 			sonar.flush_map()
 	var stats := sonar.stats()
 	var sent: int = stats.sentFeatures - before.sentFeatures
 	var sent_bytes: int = stats.sentBytes - before.sentBytes
+	var log_json := JSON.stringify(sonar.ping_log()).length()
 	_check(
-		"a turn mapped",
+		"a turn mapped and logged",
 		(
 			stats.revolutions == before.revolutions + 1
+			and stats.logPings == Ping360.GRADIANS
 			and stats.mapCells == sent
 			and stats.avgCellsPerPing >= 1
+			and stats.pingBytesBinary == Ping360.RECORD_KEYS.size() * 4 + sonar.samples
 		),
 		(
-			"%d cells (%.1f a ping, %d last), %d bytes posted (%.0f a cell, %.0f a ping)"
+			(
+				"%d cells (%.1f a ping, %d last), %d bytes posted (%.0f a cell, %.0f a ping);"
+				+ " per ping: float JSON %d, quantized JSON %d, binary %d, exported log JSON %.0f;"
+				+ " log %d bytes"
+			)
 			% [
 				sent,
 				stats.avgCellsPerPing,
@@ -325,6 +472,11 @@ func _check_turn(north: Basis) -> void:
 				sent_bytes,
 				float(sent_bytes) / sent,
 				float(sent_bytes) / Ping360.GRADIANS,
+				stats.pingBytesFloatJson,
+				stats.pingBytesQuantJson,
+				stats.pingBytesBinary,
+				float(log_json) / Ping360.GRADIANS,
+				stats.logBytes,
 			]
 		)
 	)
