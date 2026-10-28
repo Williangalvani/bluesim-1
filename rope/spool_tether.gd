@@ -16,8 +16,12 @@ extends Node3D
 # obstacle, an edge or just under load) the segments at the joint are split, graded down to bend_spacing next to it,
 # for as long as the bend is there, so a wrap or a corner is drawn and solved with a tight radius.
 # The vehicle's own collision shapes (boxes, spheres, capsules, convex hulls as their bounding box, read once from its
-# CollisionShape3D children) push the cable out analytically every sweep, except the first rov_skip_length m next to
-# the attachment; the vehicle gets the reaction (capped at rov_max_force) at the contact, so it can push the cable.
+# CollisionShape3D children) push the cable out analytically every sweep, all but the first rov_skip_length m of cable
+# from the attachment (a segment across that mark collides beyond it, its attachment end left where it is; never less
+# than the cable needs to clear the hull from an attachment inside it); the vehicle gets the reaction (capped at
+# rov_max_force) at the contact, so it can push the cable. A sphere round its camera does the same all along the cable:
+# the hull keeps the cable further off a camera inside it, the sphere is for rov_collide off and what slips past in a
+# tick. Nor is the tube drawn within draw_clearance of the camera drawing it, so it can never cut the near plane.
 # Its gripper's claws (rigid bodies jointed to it) do the same where they are moving to, all along the cable, with a
 # contact radius small enough for the cable to sit between the jaws; each claw gets its own reaction.
 # Closed round the cable, the jaws hold it (grip): the particle at the jaw point is moved with the vehicle like the
@@ -27,6 +31,25 @@ extends Node3D
 
 const WATER_DENSITY = 1000.0
 const G = 9.8
+# the StandardMaterial3D it had (albedo and emission `color`, emission energy 0.3), less what is near the camera
+const TUBE_SHADER = """
+shader_type spatial;
+render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_burley, specular_schlick_ggx;
+uniform vec4 albedo : source_color;
+uniform float emission_energy;
+uniform float clearance;
+
+void fragment() {
+	if (length(VERTEX) < clearance) {
+		discard;
+	}
+	ALBEDO = albedo.rgb;
+	METALLIC = 0.0;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.5;
+	EMISSION = albedo.rgb * emission_energy;
+}
+"""
 
 @export var max_length := 50.0  # m on the spool
 @export var initial_length := 0.0  # m out at start; 0: the distance to the spool plus initial_slack
@@ -87,9 +110,11 @@ const G = 9.8
 @export var topology_scan_per_tick := 24  # joints checked for bends/culling a tick
 @export_group("Vehicle contact")
 @export var rov_collide := true  # the vehicle's hull pushes the cable (and feels it), away from the attachment
-@export var rov_skip_length := 1.75  # m of cable from the attachment that may touch the hull (it leaves through it)
+@export var rov_skip_length := 0.2  # m of cable from the attachment that may touch the hull (it leaves from it)
 @export var rov_friction := 0.3
 @export var rov_max_force := 80.0  # N, cap on the cable's push on the vehicle in one tick
+## m kept between the cable's centreline and the vehicle's camera (its Camera3D), past the near plane's corners; 0: off
+@export var camera_clearance := 0.12
 @export_group("Claws")
 @export var claw_collide := true  # off: the claws are level geometry to the queries (one way, planes cached)
 @export var claw_contact_radius := 0.012  # m: the cable's radius and a skin, so it fits between the jaws
@@ -111,6 +136,8 @@ const G = 9.8
 @export var radial_sides := 6
 @export var draw_diameter := 0.0  # m, 0: the real diameter; thicker makes it visible from far away
 @export var color := Color(0.96, 0.75, 0.04)
+## m round the camera drawing it in which the tube is left out (its near plane's corners are 0.1 m off at 80 degrees)
+@export var draw_clearance := 0.1
 @export_group("Debug")
 @export var topology_log := false  # record each split/merge/payout and per-tick motion into topo_events/topo_ticks
 
@@ -179,10 +206,14 @@ var _rs_hs := PackedFloat32Array()
 var _rov_shapes := []  # [kind (0 box, 1 sphere, 2 capsule), shape transform in the vehicle body, half extents / radius, half segment]
 var _rov_bound := 0.0  # m from the body origin that holds every shape
 var _rov_split := []  # [segment, t] touching the hull this tick, for _adapt
+var _attach_hull_d := INF  # m from the attachment to the hull's surface, < 0 inside
 var rov_force := Vector3.ZERO  # N on the vehicle from hull contacts, last tick
 var rov_contacts := 0  # particles + segments touching the hull, last tick
 var rov_usec := 0
 var _rov_point := Vector3.ZERO
+var _cam_local := Vector3.INF  # the vehicle's camera in its frame
+var cam_contacts := 0  # segments touching the camera's sphere, last tick
+var cam_usec := 0
 var claws: Array[RigidBody3D] = []
 var claw_force: Array[Vector3] = []  # N on each claw from the cable, last tick
 var claw_contacts := 0  # particles + segments touching a claw, last tick
@@ -240,7 +271,11 @@ func _ready():
 		set_process(false)
 		return
 	attach_local = rov.to_local(global_position)
+	var vc := rov.get_node_or_null("Camera3D") as Node3D
+	_cam_local = rov.to_local(vc.global_position) if vc else Vector3.INF
 	_read_rov_shapes()
+	_rov_closest(attach_local)
+	_attach_hull_d = _rc_d
 	_find_claws()
 	var jp := rov.get_node_or_null("JawPoint") as Node3D
 	jaw_local = rov.to_local(jp.global_position) if jp else jaw_point
@@ -889,30 +924,38 @@ func claw_penetration() -> float:
 	return max(0.0, -claw_clearance)
 
 
+func _rov_skip() -> float:
+	# m of cable from the attachment the hull leaves alone: at least what it takes to clear the hull the shortest way
+	return maxf(rov_skip_length, contact_radius - _attach_hull_d)
+
+
 func rov_penetration() -> float:
-	# how deep the cable's centreline is inside the hull (m), away from the attachment: for the bench
+	# how deep the cable's centreline is inside the hull (m), past _rov_skip() of cable: for the bench
 	if _rov_shapes.is_empty() or rov == null:
 		return 0.0
 	var ti := rov.global_transform.affine_inverse()
+	var skip := _rov_skip()
 	var along := 0.0
 	var deepest := 0.0
-	for i in range(1, x.size() - 1):
-		along += rest[i - 1]
-		if along < rov_skip_length:
+	for i in range(x.size() - 1):
+		var a0 := along
+		along += rest[i]
+		if along <= skip:
 			continue
 		if x[i].distance_to(rov.global_position) > _rov_bound + rest[i] + 0.5:
 			continue
-		# the segment's deepest point: alternate projections from its nearest approach to the body origin
+		# the segment's deepest point past the skip: alternate projections from its nearest approach to the body origin
+		var tmin: float = maxf(0.0, (skip - a0) / rest[i])
 		var pa: Vector3 = ti * x[i]
 		var d: Vector3 = ti * x[i + 1] - pa
 		var dd := d.length_squared()
-		var t: float = clamp(-pa.dot(d) / dd, 0.0, 1.0) if dd > 1e-10 else 0.0
+		var t: float = clamp(-pa.dot(d) / dd, tmin, 1.0) if dd > 1e-10 else 1.0
 		for kk in range(4):
 			_rov_closest(pa + d * t)
 			deepest = max(deepest, -_rc_d)
 			if dd <= 1e-10:
 				break
-			t = clamp((pa + d * t - _rc_n * _rc_d - pa).dot(d) / dd, 0.0, 1.0)
+			t = clamp((pa + d * t - _rc_n * _rc_d - pa).dot(d) / dd, tmin, 1.0)
 	return deepest
 
 
@@ -948,9 +991,10 @@ func _solve(dt):
 		for j in range(n - 1):
 			if s_has[j]:
 				seg_list.append(j)
-	# the vehicle's hull: particles and segments near it, past rov_skip_length of cable from the attachment
+	# the vehicle's hull: particles and segments near it, past _rov_skip() of cable from the attachment
 	var rov_p := PackedInt32Array()
 	var rov_s := PackedInt32Array()
+	var rov_tmin := PackedFloat32Array()  # per segment: where along it the skip ends, 0 past it
 	var rov_t0 := Time.get_ticks_usec()
 	var rov_xf := rov.global_transform
 	var rov_v := rov.linear_velocity
@@ -961,19 +1005,21 @@ func _solve(dt):
 	_rov_split.clear()
 	if rov_collide and not _rov_shapes.is_empty():
 		var reach: float = _rov_bound + contact_radius + rov_v.length() * dt + 0.2
+		var skip := _rov_skip()
 		var along := 0.0
 		for i in range(1, n):
 			var a0 := along
 			along += rest[i - 1]
-			if along >= rov_skip_length and x[i].distance_to(rov_xf.origin) < reach and i != gi:
+			if along >= skip and x[i].distance_to(rov_xf.origin) < reach and i != gi:
 				rov_p.append(i)
-			# a segment whose near end is past the skip length and that passes within reach
-			if a0 >= rov_skip_length and i - 1 < n - 1 and i != gi and i - 1 != gi:
+			# a segment that reaches past the skip length (only that part of it collides) and passes within reach
+			if along > skip and i - 1 < n - 1 and i != gi and i - 1 != gi:
 				var sa: Vector3 = x[i - 1]
 				var sd: Vector3 = x[i] - sa
 				var tt: float = clamp((rov_xf.origin - sa).dot(sd) / max(sd.length_squared(), 1e-10), 0.0, 1.0)
 				if (sa + sd * tt).distance_to(rov_xf.origin) < reach:
 					rov_s.append(i - 1)
+					rov_tmin.append(maxf(0.0, (skip - a0) / rest[i - 1]))
 	var rov_cnt := 0
 	var rov_us := Time.get_ticks_usec() - rov_t0
 	var rov_pn := PackedFloat32Array()
@@ -1015,6 +1061,18 @@ func _solve(dt):
 	cl_ptw.resize(cl_xf.size())
 	var cl_cnt := 0
 	var cl_us := Time.get_ticks_usec() - cl_t0
+	# the camera's sphere: segments passing near it, the attachment's too
+	var cam_s := PackedInt32Array()
+	var cam_t0 := Time.get_ticks_usec()
+	if camera_clearance > 0.0 and _cam_local.is_finite():
+		var cw0: Vector3 = rov_xf * _cam_local
+		var reach: float = camera_clearance + rov_v.length() * dt + 0.1
+		for j in range(n):
+			var lim: float = reach + 0.5 * rest[j]
+			if ((x[j] + x[j + 1]) * 0.5).distance_squared_to(cw0) < lim * lim:
+				cam_s.append(j)
+	var cam_cnt := 0
+	var cam_us := Time.get_ticks_usec() - cam_t0
 	var tension_sum := 0.0
 	var spool_sum := 0.0
 	var paid := 0.0
@@ -1204,6 +1262,7 @@ func _solve(dt):
 						rov_pt_w += pen * m
 				for sk in range(rov_s.size()):
 					var j: int = rov_s[sk]
+					var tmin: float = rov_tmin[sk]
 					var pa: Vector3 = rxi * p[j]
 					var pb: Vector3 = rxi * p[j + 1]
 					var d: Vector3 = pb - pa
@@ -1214,15 +1273,16 @@ func _solve(dt):
 					var t: float = clamp(-pa.dot(d) / dd, 0.0, 1.0)
 					if (pa + d * t).length_squared() > near_r2:
 						continue
+					t = maxf(t, tmin)
 					if it2 == 1:
 						if rov_st[sk] < 0.0:
 							continue  # was clear in the first pass and has hardly moved since
 						t = rov_st[sk]
-					# closest point of the segment to the hull: alternate projections (the shapes are convex)
+					# closest point of the segment (past the skip) to the hull: alternate projections (convex shapes)
 					for kk in range(2 if it2 == 0 else 1):
 						_rov_closest(pa + d * t)
 						var c: Vector3 = pa + d * t - _rc_n * _rc_d
-						t = clamp((c - pa).dot(d) / dd, 0.0, 1.0)
+						t = clamp((c - pa).dot(d) / dd, tmin, 1.0)
 					_rov_closest(pa + d * t)
 					var pen: float = contact_radius - _rc_d
 					if it2 == 0:
@@ -1237,16 +1297,25 @@ func _solve(dt):
 					touched = true
 					var nn: Vector3 = rxf.basis * _rc_n
 					var lam := pen / den
+					if w1 == 0.0:
+						# the attachment end stays: the free end swings it out, at most twice as far as the push
+						lam = minf(lam, 2.0 * pen / w2)
 					if it2 == 0 and s == substeps - 1:
 						rov_cnt += 1
 					p[j] += nn * (lam * w1)
 					p[j + 1] += nn * (lam * w2)
-					rov_imp += nn * lam
+					rov_imp += nn * (lam * ((1.0 - t) * signf(inv_m[j]) + t * signf(inv_m[j + 1])))
 					var at: Vector3 = p[j].lerp(p[j + 1], t)
 					rov_pt_sum += at * pen
 					rov_pt_w += pen
-					if it2 == 0 and s == 0 and rest[j] >= 2.0 * near_spacing:
-						_rov_split.append([j, t])
+					if it2 == 0 and s == 0:
+						if tmin > 0.0:
+							# across the skip mark: a particle on the hull's edge right behind the attachment, past
+							# the mark (so it collides itself)
+							if rest[j] >= 2.0 * bend_spacing and rest[j] * (1.0 - tmin) >= bend_spacing:
+								_rov_split.append([j, t, bend_spacing, "split_rov"])
+						elif rest[j] >= 2.0 * near_spacing:
+							_rov_split.append([j, t])
 					far_ticks[j] = 0
 					far_ticks[j + 1] = 0
 				if not touched:
@@ -1268,6 +1337,44 @@ func _solve(dt):
 						p[i] -= fr
 						rov_imp -= fr / inv_m[i]
 			rov_us += Time.get_ticks_usec() - tr0
+		if cam_s.size():
+			# each segment's point nearest the camera is pushed out of its sphere, shared by the ends as at the hull
+			var tq0 := Time.get_ticks_usec()
+			var cw: Vector3 = rxf * _cam_local
+			for it2 in range(2):
+				for k in range(cam_s.size()):
+					var j: int = cam_s[k]
+					var pa: Vector3 = p[j]
+					var d: Vector3 = p[j + 1] - pa
+					var dd := d.length_squared()
+					var t: float = clampf((cw - pa).dot(d) / dd, 0.0, 1.0) if dd > 1e-12 else 0.0
+					var off: Vector3 = pa + d * t - cw
+					var dist := off.length()
+					var pen: float = camera_clearance - dist
+					var w1: float = inv_m[j] * (1.0 - t)
+					var w2: float = inv_m[j + 1] * t
+					var den := w1 * (1.0 - t) + w2 * t
+					if pen <= 0.0 or den < 1e-12:
+						continue
+					var nn: Vector3 = off / dist if dist > 1e-6 else Vector3.ZERO
+					if nn == Vector3.ZERO:
+						# straight through its centre: out over the top
+						nn = rxf.basis.y - d * (rxf.basis.y.dot(d) / maxf(dd, 1e-12))
+						nn = nn.normalized() if nn.length_squared() > 1e-12 else rxf.basis.x
+					var lam := pen / den
+					p[j] += nn * (lam * w1)
+					p[j + 1] += nn * (lam * w2)
+					# the momentum it gave the free ends (not the attachment's), back on the vehicle
+					rov_imp += nn * (lam * ((1.0 - t) * signf(inv_m[j]) + t * signf(inv_m[j + 1])))
+					rov_pt_sum += (cw + nn * camera_clearance) * pen
+					rov_pt_w += pen
+					if it2 == 0 and s == substeps - 1:
+						cam_cnt += 1
+					if it2 == 0 and s == 0 and t > 0.0 and t < 1.0 and rest[j] >= 2.0 * bend_spacing:
+						_rov_split.append([j, t, bend_spacing, "split_cam"])
+					far_ticks[j] = 0
+					far_ticks[j + 1] = 0
+			cam_us += Time.get_ticks_usec() - tq0
 		if cl_s.size():
 			var tc0 := Time.get_ticks_usec()
 			for sk in range(cl_s.size()):
@@ -1392,6 +1499,8 @@ func _solve(dt):
 	rov_usec = rov_us
 	claw_contacts = cl_cnt
 	claw_usec = cl_us
+	cam_contacts = cam_cnt
+	cam_usec = cam_us
 	claw_force.fill(Vector3.ZERO)
 	for c in range(cl_imp.size()):
 		claw_force[c] = (-cl_imp[c] / (h * dt)).limit_length(claw_max_force)
@@ -1520,14 +1629,14 @@ func _adapt():
 			if j == last or changes >= topology_changes_per_tick or x.size() >= max_total_particles or j >= n - 1:
 				continue
 			last = j
-			var piece: float = e[2] if e.size() > 2 else near_spacing  # (a claw gives its own)
+			var piece: float = e[2] if e.size() > 2 else near_spacing  # (a claw or the camera gives its own)
 			var lo := piece / rest[j]
 			var t: float = clamp(e[1], lo, 1.0 - lo)
 			if rest[j] < 2.0 * piece:
 				continue
 			var r: float = rest[j]
 			_insert(j + 1, x[j].lerp(x[j + 1], t), v[j].lerp(v[j + 1], t), r * t, r * (1.0 - t),
-				"split_claw" if e.size() > 2 else "split_rov")
+				e[3] if e.size() > 3 else ("split_claw" if e.size() > 2 else "split_rov"))
 			changes += 1
 			splits += 1
 			n += 1
@@ -1813,7 +1922,7 @@ func _lg_before(i: int, kind: String, ins: bool, pos: Vector3, rest_a: float, re
 		sr += r
 	var en := _lg_energy()
 	var stale := 0
-	if kind in ["split_rov", "split_claw"]:
+	if kind in ["split_rov", "split_claw", "split_cam"]:
 		for ev in _lg_tick_events:
 			stale |= int(ev <= i)
 	_lg_pre = {"kind": kind, "i": i, "n": n, "ins": ins, "vel": vel, "at": at, "mass": mass, "nb_st": nb_st, "a_b": a_b, "j_b": j_b, "off": off,
@@ -1877,11 +1986,13 @@ func _build_mesh():
 	mi.top_level = true
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.extra_cull_margin = 1000.0
-	var mat = StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.emission_enabled = true
-	mat.emission = color
-	mat.emission_energy_multiplier = 0.3
+	var shader = Shader.new()
+	shader.code = TUBE_SHADER
+	var mat = ShaderMaterial.new()
+	mat.shader = shader
+	mat.set_shader_parameter("albedo", color)
+	mat.set_shader_parameter("emission_energy", 0.3)
+	mat.set_shader_parameter("clearance", draw_clearance)
 	mi.material_override = mat
 	add_child(mi)
 	mi.global_transform = Transform3D.IDENTITY
