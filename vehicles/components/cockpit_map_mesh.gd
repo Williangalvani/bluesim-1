@@ -26,11 +26,17 @@ extends RefCounted
 # Godot hands JavaScript strings only, so on the web both go as base64 in a JSON string, and
 # JS_POST decodes the typed ones in the page into typed arrays to post with a transfer list.
 #
-# Replies (TODO: not in Cockpit's mesh spike yet, so nothing asks for them by default). A command
-# with a requestId is to be answered with cockpit:mapMeshResult {requestId, ok, error?}, and
-# cockpit:getMapCapabilities {requestId} with cockpit:mapCapabilities {requestId, meshes: {version,
-# drawn, maxCapacity, maxQuadsPerMessage, ...}}. handle_reply() takes both; ask_capabilities and
-# request_results turn on asking.
+# Answers, from Cockpit to the sender, the same way the command came (to this page's window, or on
+# the same WebSocket), in the order the commands were sent. create() and replay() first send
+#   0. cockpit:getMapCapabilities {requestId}, answered with cockpit:mapCapabilities {requestId,
+#      meshes: {version, drawn, maxCapacity, maxQuadsPerMessage, maxMessageBytes, maxTexelSide,
+#      formats}}: a version other than API_VERSION stops the quads, the limits are followed, and
+#      drawn is false where Cockpit keeps meshes but cannot show them (no WebGL2). No answer means a
+#      Cockpit without meshes, which ignores every one of these commands.
+# A command with a requestId is answered with cockpit:mapMeshResult {requestId, id, ok, error?,
+# capacity?, head?, first?, count?}, capacity and head only while the mesh exists. Every command
+# but the quads, which go many times a second, carries one, so a Cockpit that lost the mesh is
+# noticed at the next of them and given replay(). handle_reply() takes both answers.
 
 const FORMAT_BYTES := {"r8": 1, "rgba8": 4}
 const MAX_CAPACITY := 1 << 20
@@ -42,8 +48,15 @@ const CORNER_BYTES := 8 * 8
 const UV_BYTES := 8 * 4
 const TINT_BYTES := 4
 const WHITE := [255, 255, 255, 255]
+const API_VERSION := 1
 const RESULT_TYPE := "cockpit:mapMeshResult"
 const CAPABILITIES_TYPE := "cockpit:mapCapabilities"
+const QUADS_TYPE := "cockpit:setMapMeshQuads"
+const SET_TYPE := "cockpit:setMapMesh"
+const REMOVE_TYPE := "cockpit:removeMapMesh"
+const CAPABILITIES_QUERY := "cockpit:getMapCapabilities"
+# requestIds waiting for an answer, beyond which an old Cockpit that never answers is assumed
+const MAX_OUTSTANDING := 256
 # kinds of the arrays a message carries, by the packed array type holding them
 const KINDS := {TYPE_PACKED_FLOAT64_ARRAY: "f64", TYPE_PACKED_FLOAT32_ARRAY: "f32"}
 # posts a message given as JSON with its typed arrays in base64, decoded at the dotted paths given
@@ -84,6 +97,9 @@ const JS_LISTEN := """
 	});
 	"""
 
+# requestIds are numbered across meshes, so a late answer for a removed one is not taken for this
+static var _requests := 0
+
 var id: String
 var mesh_name: String
 var capacity: int
@@ -101,15 +117,23 @@ var keep_history := true
 # a write is held at most this long, s, to go out with the next ones
 var flush_interval := 1.0 / 60
 var max_quads_per_message := MAX_QUADS_PER_MESSAGE
-# TODO: ask once Cockpit answers cockpit:getMapCapabilities and gives requestIds a result
-var ask_capabilities := false
-var request_results := false
+var max_message_bytes := MAX_MESSAGE_BYTES
+var ask_capabilities := true
+# gives every command but the quads a requestId, or the quads too
+var ask_results := true
+var ask_quad_results := false
 # takes each message, its arrays as PackedFloat64Array, PackedFloat32Array and PackedByteArray
 var post := Callable()
 # quads written to the ring since the mesh was last emptied; the next goes in slot seq % capacity
 var seq := 0
 # what Cockpit said it can do, from cockpit:mapCapabilities
 var capabilities := {}
+# false once Cockpit has said it takes no mesh like this one: quads are then kept but not sent
+var supported := true
+# whether Cockpit shows the mesh, as far as it said
+var drawn := true
+# the slot Cockpit's next write without `first` goes in, from its last answer, -1 before one
+var head := -1
 var messages := 0
 var quads_sent := 0
 # bytes posted: as typed arrays (JSON envelope plus raw arrays) and as base64 JSON
@@ -125,7 +149,6 @@ var last_error := ""
 
 var _strip_bytes := 0
 var _since_flush := 0.0
-var _next_request := 0
 # quads waiting for flush(), in the order written
 var _slots := PackedInt32Array()
 var _corners := PackedFloat64Array()
@@ -142,6 +165,8 @@ var _history_order := PackedInt64Array()
 var _order := 0
 var _written := 0
 var _white := PackedByteArray(WHITE)
+# the type of each command sent with a requestId and not yet answered
+var _outstanding := {}
 
 
 func _init(
@@ -188,10 +213,7 @@ func create() -> void:
 	_drop_pending()
 	_reset_history()
 	seq = 0
-	_send({"type": "cockpit:setMapMesh", "mesh": definition()})
-	_send({"type": "cockpit:clearMapMesh", "id": id})
-	if ask_capabilities:
-		request_capabilities()
+	_announce()
 
 
 # Empties the mesh, here and in Cockpit, and starts the ring again from slot 0
@@ -264,6 +286,9 @@ func tick(delta: float) -> void:
 # Sends every queued quad now, in as few messages as Cockpit takes
 func flush() -> void:
 	_since_flush = 0.0
+	if not supported:
+		_drop_pending()
+		return
 	var start := 0
 	for run in batches(_slots, _strip_bytes + (TINT_BYTES if _tinted else 0)):
 		_send(_quads_message(start, run))
@@ -274,7 +299,7 @@ func flush() -> void:
 # How many quads go in each message, in order, for quads in `slots`: consecutive slots, at most
 # max_quads_per_message and MAX_MESSAGE_BYTES of arrays at `quad_bytes` of texels and tint each
 func batches(slots: PackedInt32Array, quad_bytes: int) -> PackedInt32Array:
-	var by_bytes := maxi(MAX_MESSAGE_BYTES / (CORNER_BYTES + UV_BYTES + quad_bytes), 1)
+	var by_bytes := maxi(max_message_bytes / (CORNER_BYTES + UV_BYTES + quad_bytes), 1)
 	var most := mini(max_quads_per_message, by_bytes)
 	var runs := PackedInt32Array()
 	var count := 0
@@ -293,8 +318,7 @@ func batches(slots: PackedInt32Array, quad_bytes: int) -> PackedInt32Array:
 func replay() -> void:
 	replays += 1
 	_drop_pending()
-	_send({"type": "cockpit:setMapMesh", "mesh": definition()})
-	_send({"type": "cockpit:clearMapMesh", "id": id})
+	_announce()
 	var order := []
 	for slot in _history_order.size():
 		if _history_order[slot] >= 0:
@@ -312,41 +336,36 @@ func replay() -> void:
 
 
 func request_capabilities() -> void:
-	_send({"type": "cockpit:getMapCapabilities", "requestId": _request_id()})
+	_send({"type": CAPABILITIES_QUERY})
 
 
-# Takes a reply from Cockpit, true if it was one for map meshes
+# Takes an answer from Cockpit, true if it was to this mesh's commands
 func handle_reply(message: Dictionary) -> bool:
-	match String(message.get("type", "")):
-		CAPABILITIES_TYPE:
-			var meshes: Variant = message.get("meshes")
-			if typeof(meshes) != TYPE_DICTIONARY:
-				return true
-			capabilities = meshes
-			if meshes.has("maxQuadsPerMessage"):
-				max_quads_per_message = clampi(
-					int(meshes.maxQuadsPerMessage), 1, MAX_QUADS_PER_MESSAGE
-				)
-			if not meshes.get("drawn", true):
-				push_warning("Cockpit cannot draw map meshes, so %s will not show" % id)
-			if int(meshes.get("maxCapacity", capacity)) < capacity:
-				push_warning(
-					(
-						"Cockpit holds %d quads a mesh, %s needs %d"
-						% [meshes.maxCapacity, id, capacity]
-					)
-				)
-			return true
-		RESULT_TYPE:
-			if not String(message.get("requestId", "")).begins_with(id + ":"):
-				return false
-			results += 1
-			if not message.get("ok", false):
-				errors += 1
-				last_error = str(message.get("error", ""))
-				# TODO: replay() once Cockpit says which error means it lost the mesh
-			return true
-	return false
+	var request := String(message.get("requestId", ""))
+	if not _outstanding.has(request):
+		return false
+	var command: String = _outstanding[request]
+	_outstanding.erase(request)
+	if message.get("type") == CAPABILITIES_TYPE:
+		_take_capabilities(message.get("meshes"))
+		return true
+	if message.get("type") != RESULT_TYPE:
+		return true
+	results += 1
+	if message.has("head"):
+		head = int(message.head)
+	if message.get("ok", false):
+		return true
+	errors += 1
+	last_error = str(message.get("error", ""))
+	push_warning("Cockpit refused %s of map mesh %s: %s" % [command, id, last_error])
+	if command == SET_TYPE:
+		# replaying would only be refused again
+		supported = false
+	elif supported and command != REMOVE_TYPE and not message.has("capacity"):
+		# Cockpit has no such mesh: it reloaded, or something removed it
+		replay()
+	return true
 
 
 # Gives the page JS_POST and hands `on_reply` each reply from its parent, as a Dictionary for
@@ -432,6 +451,9 @@ func stats() -> Dictionary:
 		"lastBytesJson": last_bytes_json,
 		"lastQuads": last_quads,
 		"replays": replays,
+		"supported": supported,
+		"drawn": drawn,
+		"head": head,
 		"results": results,
 		"errors": errors,
 		"lastError": last_error,
@@ -453,8 +475,13 @@ func _quads_message(start: int, count: int) -> Dictionary:
 
 
 func _send(message: Dictionary) -> void:
-	if request_results and message.type != "cockpit:getMapCapabilities":
-		message.requestId = _request_id()
+	var quads: bool = message.type == QUADS_TYPE
+	if message.type == CAPABILITIES_QUERY or (ask_quad_results if quads else ask_results):
+		_requests += 1
+		message.requestId = "%s-%d" % [id, _requests]
+		if _outstanding.size() >= MAX_OUTSTANDING:
+			_outstanding.clear()
+		_outstanding[message.requestId] = message.type
 	var sizes := message_bytes(message)
 	messages += 1
 	last_bytes_typed = sizes.x
@@ -468,9 +495,41 @@ func _send(message: Dictionary) -> void:
 		post.call(message)
 
 
-func _request_id() -> String:
-	_next_request += 1
-	return "%s:%d" % [id, _next_request]
+# What a Cockpit with none of the mesh needs first: whether it takes meshes, then the mesh, empty
+func _announce() -> void:
+	if ask_capabilities:
+		request_capabilities()
+	_send({"type": SET_TYPE, "mesh": definition()})
+	_send({"type": "cockpit:clearMapMesh", "id": id})
+
+
+func _take_capabilities(meshes: Variant) -> void:
+	if typeof(meshes) != TYPE_DICTIONARY:
+		return
+	capabilities = meshes
+	if int(meshes.get("version", 0)) != API_VERSION:
+		push_warning(
+			"Cockpit's map meshes are version %s, not %d" % [meshes.get("version"), API_VERSION]
+		)
+		supported = false
+		return
+	drawn = bool(meshes.get("drawn", true))
+	if not drawn:
+		push_warning("Cockpit keeps map mesh %s but cannot draw it (no WebGL2)" % id)
+	max_quads_per_message = clampi(
+		int(meshes.get("maxQuadsPerMessage", MAX_QUADS_PER_MESSAGE)), 1, MAX_QUADS_PER_MESSAGE
+	)
+	max_message_bytes = clampi(
+		int(meshes.get("maxMessageBytes", MAX_MESSAGE_BYTES)), 1, MAX_MESSAGE_BYTES
+	)
+	var too_big: bool = (
+		int(meshes.get("maxCapacity", capacity)) < capacity
+		or int(meshes.get("maxTexelSide", MAX_STRIP_SIDE)) < maxi(width, height)
+		or format not in meshes.get("formats", [format])
+	)
+	if too_big:
+		push_warning("Cockpit takes no map mesh like %s" % id)
+		supported = false
 
 
 func _remember(slot: int, queued: int) -> void:

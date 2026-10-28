@@ -1,7 +1,8 @@
 extends RefCounted
-# What Cockpit makes of the map mesh commands, after src/libs/map/external-overlay-api.ts (schema)
-# and external-map-meshes.ts (store) in Cockpit: apply() returns the reason Cockpit would refuse a
-# message, or "", and keeps each mesh's slots as Cockpit would.
+# What Cockpit makes of the map mesh commands, after src/libs/map/external-overlay-api.ts (schema),
+# external-map-meshes.ts (store) and composables/map/useExternalMapOverlays.ts (answers) in
+# Cockpit's mesh spike, API v1: apply() returns the reason Cockpit would refuse a message, or "",
+# keeps each mesh's slots as Cockpit would and queues the answers in `replies`.
 
 # gdlint: disable=max-returns
 const MAX_CAPACITY := 1 << 20
@@ -24,6 +25,12 @@ const MESH_TYPES := [
 # id: {mesh, head, slots: {slot: {corners, uv, texels, tint}}}
 var meshes := {}
 var problems: Array[String] = []
+# answers to the commands with a requestId, in order
+var replies: Array[Dictionary] = []
+# what cockpit:mapCapabilities says
+var version := 1
+var drawn := true
+var max_capacity := MAX_CAPACITY
 var _id_pattern := RegEx.create_from_string("^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -38,8 +45,32 @@ func apply_all(posted: Array) -> Array[String]:
 
 func apply(message: Dictionary) -> String:
 	var type: String = message.get("type", "")
+	if type == "cockpit:getMapCapabilities":
+		var limits := {"maxCapacity": max_capacity, "maxQuadsPerMessage": MAX_WRITE_QUADS}
+		limits.merge({"maxMessageBytes": MAX_MESSAGE_BYTES, "maxTexelSide": MAX_STRIP_SIDE})
+		limits.merge({"version": version, "drawn": drawn, "formats": ["r8", "rgba8"]})
+		var answer := {"type": "cockpit:mapCapabilities", "requestId": message.requestId}
+		answer.meshes = limits
+		replies.append(answer)
+		return ""
 	if type not in MESH_TYPES:
 		return ""
+	var problem := _apply(message)
+	if message.has("requestId"):
+		var id: String = message.mesh.id if message.has("mesh") else message.get("id", "")
+		var reply := {"type": "cockpit:mapMeshResult", "requestId": message.requestId, "id": id}
+		reply.ok = problem == ""
+		if problem:
+			reply.error = problem
+		if meshes.has(id):
+			reply.capacity = meshes[id].mesh.capacity
+			reply.head = meshes[id].head % reply.capacity
+		replies.append(reply)
+	return problem
+
+
+func _apply(message: Dictionary) -> String:
+	var type: String = message.type
 	if type == "cockpit:setMapMesh":
 		return _set_mesh(message.mesh)
 	if not _id_pattern.search(String(message.get("id", ""))):
@@ -80,7 +111,7 @@ func _set_mesh(mesh: Dictionary) -> String:
 		return "bad id"
 	if not (mesh.get("name") is String and mesh.name != ""):
 		return "no name"
-	if not (mesh.get("capacity") is int and mesh.capacity >= 1 and mesh.capacity <= MAX_CAPACITY):
+	if not (mesh.get("capacity") is int and mesh.capacity >= 1 and mesh.capacity <= max_capacity):
 		return "capacity %s" % mesh.get("capacity")
 	var texels: Dictionary = mesh.get("texels", {})
 	if texels.get("format") not in ["r8", "rgba8"]:

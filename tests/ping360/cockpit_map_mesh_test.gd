@@ -122,6 +122,7 @@ func _check_batches() -> void:
 	var posted: Array[Dictionary] = []
 	var mesh := MapMesh.new(ID, "Test", 10000, "r8", 200)
 	mesh.post = func(message: Dictionary) -> void: posted.append(message)
+	mesh.ask_capabilities = false
 	mesh.keep_history = false
 	var slots := PackedInt32Array()
 	for n in 9000:
@@ -189,6 +190,8 @@ func _check_encoding() -> void:
 	var posted: Array[Dictionary] = []
 	var mesh := MapMesh.new(ID, "Test", 4096, "r8", 200)
 	mesh.post = func(message: Dictionary) -> void: posted.append(message)
+	mesh.ask_capabilities = false
+	mesh.ask_results = false
 	mesh.create()
 	mesh.write_quad(_corners(7), _uv(200), _texels(7, 200))
 	mesh.flush()
@@ -323,38 +326,123 @@ func _check_remove_and_tint() -> void:
 
 func _check_replies() -> void:
 	var posted: Array[Dictionary] = []
-	var mesh := _mesh(6, posted)
-	mesh.ask_capabilities = true
-	mesh.request_results = true
+	var mesh := _mesh(6, posted, true)
+	var cockpit := Model.new()
 	mesh.create()
-	var asked: Dictionary = posted[-1]
-	var capabilities := {
-		"type": "cockpit:mapCapabilities",
-		"requestId": asked.get("requestId"),
-		"meshes": {"version": 1, "drawn": true, "maxCapacity": 1 << 20, "maxQuadsPerMessage": 512},
-	}
-	var result := {"type": "cockpit:mapMeshResult", "requestId": posted[0].requestId, "ok": false}
-	result.error = "nope"
+	for n in 4:
+		_write(mesh, n)
+	mesh.flush()
+	cockpit.apply_all(posted)
+	var asked := posted.map(func(m: Dictionary) -> bool: return m.has("requestId"))
+	for reply in cockpit.replies:
+		mesh.handle_reply(reply)
 	_check(
-		"capabilities and results taken, their limits followed",
+		"create asks capabilities first, then answers for all but the quads",
 		(
-			asked.type == "cockpit:getMapCapabilities"
-			and posted[0].requestId != posted[1].requestId
-			and mesh.handle_reply(capabilities)
-			and mesh.max_quads_per_message == 512
-			and mesh.handle_reply(result)
-			and mesh.errors == 1
-			and mesh.last_error == "nope"
-			and not mesh.handle_reply({"type": "cockpit:mapMeshResult", "requestId": "other:1"})
-			and not mesh.handle_reply({"type": "bluesim:ping360"})
+			posted[0].type == "cockpit:getMapCapabilities"
+			and asked == [true, true, true, false]
+			and mesh.supported
+			and mesh.drawn
+			and mesh.results == 2
+			and mesh.errors == 0
+			and mesh.head == 0
+			and mesh.capabilities.version == 1
 		),
 		str(mesh.stats())
 	)
 
+	# Cockpit reloaded without this side knowing: the next command finds no mesh, so it replays
+	cockpit = Model.new()
+	posted.clear()
+	mesh.clear()
+	for n in range(10, 13):
+		_write(mesh, n)
+	mesh.flush()
+	cockpit.apply_all(posted)
+	var replies := cockpit.replies.duplicate()
+	cockpit.replies.clear()
+	cockpit.problems.clear()
+	posted.clear()
+	for reply in replies:
+		mesh.handle_reply(reply)
+	cockpit.apply_all(posted)
+	var expected := {0: _texels(10), 1: _texels(11), 2: _texels(12)}
+	_check(
+		"a Cockpit that lost the mesh is replayed to",
+		(
+			mesh.replays == 1
+			and mesh.errors == 1
+			and posted[1].type == "cockpit:setMapMesh"
+			and cockpit.problems.is_empty()
+			and cockpit.slot_texels(ID) == expected
+		),
+		"%s; %s" % [mesh.last_error, cockpit.problems]
+	)
 
-func _mesh(capacity: int, posted: Array[Dictionary]) -> MapMesh:
+	# answers to another mesh's commands, or a removed one's, are not this one's
+	var stale := {"type": "cockpit:mapMeshResult", "requestId": "%s-1" % ID, "ok": false}
+	var other := {"type": "cockpit:mapMeshResult", "requestId": "other-9", "ok": false}
+	_check(
+		"answers to other meshes' commands left alone",
+		not mesh.handle_reply(stale) and not mesh.handle_reply(other) and mesh.errors == 1,
+		""
+	)
+
+	# a newer Cockpit's mesh commands, or a mesh too big for it: no quads sent, no replay loop
+	for cockpit_kind in ["version 2", "small"]:
+		posted.clear()
+		cockpit = Model.new()
+		cockpit.version = 2 if cockpit_kind == "version 2" else 1
+		cockpit.max_capacity = 4 if cockpit_kind == "small" else Model.MAX_CAPACITY
+		var unfit := _mesh(6, posted, true)
+		unfit.create()
+		cockpit.apply_all(posted)
+		for reply in cockpit.replies:
+			unfit.handle_reply(reply)
+		var sent := posted.size()
+		_write(unfit, 1)
+		unfit.flush()
+		_check(
+			"Cockpit taking no such mesh (%s): quads kept, not sent" % cockpit_kind,
+			not unfit.supported and posted.size() == sent and unfit.replays == 0,
+			str(unfit.stats())
+		)
+
+	posted.clear()
+	cockpit = Model.new()
+	cockpit.drawn = false
+	var hidden := _mesh(6, posted, true)
+	hidden.create()
+	cockpit.apply_all(posted)
+	for reply in cockpit.replies:
+		hidden.handle_reply(reply)
+	var capabilities := {
+		"type": "cockpit:mapCapabilities",
+		"requestId": "",
+		"meshes":
+		{"version": 1, "drawn": false, "maxQuadsPerMessage": 512, "maxMessageBytes": 100000},
+	}
+	hidden.request_capabilities()
+	capabilities.requestId = posted[-1].requestId
+	hidden.handle_reply(capabilities)
+	_check(
+		"Cockpit without WebGL2 still sent to; lower limits followed",
+		(
+			hidden.supported
+			and not hidden.drawn
+			and hidden.max_quads_per_message == 512
+			and hidden.batches(_range(600), 200) == PackedInt32Array([337, 263])
+		),
+		str(hidden.batches(_range(600), 200))
+	)
+
+
+# A mesh posting into `posted`, which asks Cockpit nothing unless `asking`
+func _mesh(capacity: int, posted: Array[Dictionary], asking := false) -> MapMesh:
 	var mesh := MapMesh.new(ID, "Test", capacity, "r8", 3)
 	mesh.post = func(message: Dictionary) -> void: posted.append(message)
+	mesh.ask_capabilities = asking
+	mesh.ask_results = asking
 	return mesh
 
 

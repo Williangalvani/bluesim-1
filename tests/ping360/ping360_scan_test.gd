@@ -318,11 +318,12 @@ func _check_map_commands() -> void:
 	sonar.range_m = 30
 	sonar.start_map()
 	var types := posted.map(func(message: Dictionary) -> String: return message.type)
-	var mesh: Dictionary = posted[0].mesh
+	var mesh: Dictionary = posted[1].get("mesh", {})
 	_check(
-		"map start: setMapMesh, then clearMapMesh, as the spike's schema has them",
+		"map start: capabilities asked, setMapMesh, then clearMapMesh, as Cockpit's API v1 has them",
 		(
-			types == ["cockpit:setMapMesh", "cockpit:clearMapMesh"]
+			types == ["cockpit:getMapCapabilities", "cockpit:setMapMesh", "cockpit:clearMapMesh"]
+			and posted.all(func(message: Dictionary) -> bool: return message.has("requestId"))
 			and mesh.id == "bluesim-ping360-map"
 			and mesh.capacity == 4096
 			and mesh.texels == {"format": "r8", "width": 200, "height": 1}
@@ -366,7 +367,8 @@ func _check_map_commands() -> void:
 		"map start again empties Cockpit's copy, stop removes it",
 		(
 			model.problems.is_empty()
-			and posted[-1] == {"type": "cockpit:removeMapMesh", "id": Ping360.MAP_ID}
+			and posted[-1].type == "cockpit:removeMapMesh"
+			and posted[-1].id == Ping360.MAP_ID
 			and model.meshes.is_empty()
 			and sonar.map_mesh == null
 		),
