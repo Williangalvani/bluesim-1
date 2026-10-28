@@ -142,8 +142,6 @@ var _history_order := PackedInt64Array()
 var _order := 0
 var _written := 0
 var _white := PackedByteArray(WHITE)
-# held so JavaScript can call back
-var _js_reply: JavaScriptObject
 
 
 func _init(
@@ -351,12 +349,19 @@ func handle_reply(message: Dictionary) -> bool:
 	return false
 
 
-# Gives the page JS_POST and, embedded, hands replies from its parent to handle_reply()
-func install_web() -> void:
+# Gives the page JS_POST and hands `on_reply` each reply from its parent, as a Dictionary for
+# handle_reply(). Returns the callback JavaScript calls, to be held while replies are wanted.
+static func install_web(on_reply: Callable) -> JavaScriptObject:
 	JavaScriptBridge.eval(JS_POST)
-	_js_reply = JavaScriptBridge.create_callback(_on_js_reply)
-	JavaScriptBridge.get_interface("window").cockpitMapMeshReply = _js_reply
+	var reply := JavaScriptBridge.create_callback(
+		func(args: Array) -> void:
+			var message: Variant = JSON.parse_string(str(args[0]))
+			if typeof(message) == TYPE_DICTIONARY:
+				on_reply.call(message)
+	)
+	JavaScriptBridge.get_interface("window").cockpitMapMeshReply = reply
 	JavaScriptBridge.eval(JS_LISTEN % [RESULT_TYPE, CAPABILITIES_TYPE])
+	return reply
 
 
 # Posts `message` to the page embedding this one, through JS_POST with its arrays as typed arrays,
@@ -503,9 +508,3 @@ func _drop_pending() -> void:
 	_texels = PackedByteArray()
 	_tints = PackedByteArray()
 	_tinted = false
-
-
-func _on_js_reply(args: Array) -> void:
-	var message: Variant = JSON.parse_string(str(args[0]))
-	if typeof(message) == TYPE_DICTIONARY:
-		handle_reply(message)

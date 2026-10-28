@@ -1,11 +1,12 @@
 extends Node
 # Checks the simulated Ping360's scan against a flat floor 3 m under the transducer and a wall 8 m
-# north of it, its placement of the scan on the map, the chunks it keeps the map in and its log of
-# quantized pings.
+# north of it, the quads it lays on Cockpit's map for its pings, the map's palette and ring of
+# slots, as a model of Cockpit (cockpit_mesh_model.gd) takes them, and its log of quantized pings.
 #   godot4.7 --headless --path . res://tests/ping360/ping360_scan_test.tscn
 # Prints one line per check and exits non-zero if any fails.
 
 const Ping360 = preload("res://vehicles/components/ping360.gd")
+const Model = preload("res://tests/ping360/cockpit_mesh_model.gd")
 const PINGS := 40
 const FLOOR_DEPTH := 3.0
 const WALL_NORTH := 8.0
@@ -105,10 +106,12 @@ func _run() -> void:
 	)
 
 	_check_map(north)
-	_check_runs(north)
+	_check_palette()
+	_check_capacity()
 	_check_record()
 	_check_pose()
-	_check_chunks()
+	_check_map_commands()
+	_check_ring()
 	_check_log()
 	await _set_bodies([floor_body, wall, far_wall], [])
 	_check_turn(north)
@@ -129,107 +132,116 @@ func _check_map(north: Basis) -> void:
 	lonlat = Ping360.world_to_lonlat(Vector3(0, 0, east), lat, lon)
 	_check("1/1000 degree east is +Z", lonlat == [-118.392867, 33.810313], str(lonlat))
 
-	sonar.basis = north
-	# a level for each display bin unlike its neighbours', so each is a cell of its own
-	var bins := PackedFloat32Array()
-	bins.resize(sonar.samples)
-	for b in bins.size():
-		bins[b] = 1.0 if b * sonar.display_bins / sonar.samples % 2 else 0.5
-	var cells := sonar.wedge_cells(bins, 0)
-	var ring: Array = cells[10].geometry.coordinates[0]
+	var origin := Vector3(3, -1, -2)
+	sonar.transform = Transform3D(north, origin)
+	sonar.range_m = 20
+	var levels := PackedByteArray()
+	for b in sonar.samples:
+		levels.append(b + 50)
+	var quad := sonar.ping_quad(levels, 0)
+	var corners: PackedFloat64Array = quad.corners
+	var transducer := Ping360.world_to_lonlat_exact(origin, sonar.home_lat, sonar.home_lon)
+	var a := _offset(corners, 2)
+	var b := _offset(corners, 3)
+	var half := Ping360.WEDGE_STEPS * sonar.angle_step / 2.0 * TAU / Ping360.GRADIANS
 	_check(
-		"map cell, head 0 facing north",
+		"map quad [O, O, A, B]: O at the transducer, A and B at the range either side of north",
 		(
-			cells.size() == sonar.display_bins
-			and ring.size() == 5
-			and ring[0] == ring[4]
-			and ring[1][1] > ring[0][1]
-			and ring[3][0] > ring[0][0]
+			corners.size() == 8
+			and corners.slice(0, 2) == transducer
+			and corners.slice(2, 4) == transducer
+			and absf(a.length() - sonar.range_m) < 1e-3
+			and absf(b.length() - sonar.range_m) < 1e-3
+			and absf(atan2(a.y, a.x) + half) < 1e-4
+			and absf(atan2(b.y, b.x) - half) < 1e-4
 		),
-		"%d cells, ring %s" % [cells.size(), ring]
+		"A %s, B %s m north, east of O" % [a, b]
 	)
-	cells = sonar.wedge_cells(bins, 100)
-	ring = cells[10].geometry.coordinates[0]
-	_check("map cell, head 100 facing north is east", ring[1][0] > ring[0][0], str(ring))
+	sonar.angle_step = 2
+	var wide := sonar.ping_quad(levels, 100)
+	a = _offset(wide.corners, 2)
+	b = _offset(wide.corners, 3)
+	var bisector := rad_to_deg(atan2(a.y + b.y, a.x + b.x))
+	var spread := rad_to_deg(a.angle_to(b))
+	_check(
+		"map quad widened to 1.5 head steps, head 100 facing north is east",
+		absf(bisector - 90) < 1e-3 and absf(spread - 1.5 * 2 * 0.9) < 1e-3,
+		"bisector %.4f, %.4f degrees wide" % [bisector, spread]
+	)
+	sonar.angle_step = 1
 	sonar.rotate_y(-PI / 2)  # yawed right, to face east
-	cells = sonar.wedge_cells(bins, 0)
-	ring = cells[10].geometry.coordinates[0]
-	_check("map cell, head 0 facing east", ring[1][0] > ring[0][0], str(ring))
-	bins.fill(0.0)
-	sonar.draw_empty = false
-	_check("no map cells for silence", sonar.wedge_cells(bins, 0).is_empty(), "")
-	sonar.draw_empty = true
-	cells = sonar.wedge_cells(bins, 0)
+	a = _offset(sonar.ping_quad(levels, 0).corners, 2)
+	_check("map quad, head 0 facing east", absf(rad_to_deg(atan2(a.y, a.x)) - 90) < 1, str(a))
+	var texels: PackedByteArray = quad.texels
+	var blanked := ceili(sonar.map_blank_m / sonar.range_m * sonar.samples)
 	_check(
-		"silence drawn as one dark cell with draw_empty",
+		"map quad uv runs 0 to the bins along the range, the bins as its texels, ringdown blanked",
 		(
-			cells.size() == 1
-			and cells[0].properties.b0 == 0
-			and cells[0].properties.b1 == sonar.samples
-			and cells[0].properties.fill == "#" + Ping360.level_colour(0).to_html(false)
+			quad.uv == PackedFloat32Array([0, 0.5, 0, 0.5, 200, 0.5, 200, 0.5])
+			and texels.size() == sonar.samples
+			and texels.slice(0, blanked).count(0) == blanked
+			and texels.slice(blanked) == levels.slice(blanked)
+			and levels[0] == 50
 		),
-		str(cells.map(func(cell: Dictionary) -> Dictionary: return cell.properties))
+		"%d bins blanked" % blanked
 	)
 	sonar.transform = Transform3D.IDENTITY
 
 
-func _check_runs(north: Basis) -> void:
-	var strengths := PackedFloat32Array([0.0, 0.01, 0.5, 0.52, 0.9, 1.0, 1.0, 0.2, 0.0, 0.0])
-	var runs := Ping360.level_runs(strengths)
-	var expected := PackedInt32Array([0, 2, 0, 2, 4, 8, 4, 5, 14, 5, 7, 15, 7, 8, 3, 8, 10, 0])
-	_check("level runs", runs == expected, str(runs))
+# The map's palette: transparent for silence and the noise, then a smooth ramp to opaque
+func _check_palette() -> void:
+	var palette := Ping360.map_palette()
+	var alphas := []
+	for strength in 256:
+		alphas.append(palette[strength * 4 + 3])
+	var rising := true
+	var biggest_step := 0
+	for strength in range(1, 256):
+		rising = rising and alphas[strength] >= alphas[strength - 1]
+		biggest_step = maxi(biggest_step, alphas[strength] - alphas[strength - 1])
+	var noise := ceili(sonar.noise_floor * 255)
+	var white := Ping360.sonar_colour(1)
+	_check(
+		"palette: silence and noise transparent, alpha rising smoothly to opaque",
+		(
+			palette.size() == 1024
+			and alphas[0] == 0
+			and alphas.slice(0, noise + 1).max() == 0
+			and rising
+			and biggest_step <= 6
+			and alphas[ceili(Ping360.ALPHA_TO * 255)] == 255
+			and alphas[255] == 255
+			and palette.slice(1020, 1023) == PackedByteArray([white.r8, white.g8, white.b8])
+		),
+		"alpha %s, biggest step %d" % [alphas.slice(0, 100, 8), biggest_step]
+	)
 
-	var display_bins := sonar.display_bins
-	sonar.display_bins = strengths.size()
-	sonar.basis = north
-	var bins := PackedFloat32Array()
-	bins.resize(sonar.samples)
-	for b in bins.size():
-		bins[b] = strengths[b * strengths.size() / sonar.samples]
-	var record := {"k": 1}
-	var cells := sonar.wedge_cells(bins, 0, record)
-	var covered: bool = (
-		cells.size() == expected.size() / 3
-		and cells[0].properties.b0 == 0
-		and cells[-1].properties.b1 == sonar.samples
-	)
-	var styled := true
-	for n in cells.size():
-		var properties: Dictionary = cells[n].properties
-		if n > 0 and properties.b0 != cells[n - 1].properties.b1:
-			covered = false
-		var colour := "#" + Ping360.level_colour(expected[n * 3 + 2]).to_html(false)
-		if properties.fill != colour or properties.ping != record:
-			styled = false
-	var spans := cells.map(
-		func(cell: Dictionary) -> Array: return [cell.properties.b0, cell.properties.b1]
-	)
-	_check("map cells, one per run, cover every bin", covered, str(spans))
+
+func _check_capacity() -> void:
+	var capacities := []
+	for range_m: float in [1.0, 10.0, 30.0, 50.0]:
+		sonar.range_m = range_m
+		capacities.append(sonar.map_capacity())
+	sonar.map_history_s = 3600
+	var most := sonar.map_capacity()
+	sonar.map_history_s = 210
+	sonar.range_m = 20
 	_check(
-		"map cells coloured from the palette, carrying the ping",
-		styled and cells[3].properties.v == 255 and cells[1].properties.v == 133,
-		str(cells.map(func(cell: Dictionary) -> String: return cell.properties.fill))
+		"map capacity: 3.5 min of pings, 4096 at 30 m",
+		capacities == [11264, 9216, 4096, 3072] and most == Ping360.MAX_MAP_CAPACITY,
+		str(capacities)
 	)
-	# the second run, display bins 2 to 4, reaches from 2 to 4 cell depths north
-	var ring: Array = cells[1].geometry.coordinates[0]
-	var depth := sonar.range_m / sonar.display_bins
-	var inner: float = (ring[0][1] - Ping360.DEFAULT_HOME_LAT) * Ping360.METRES_PER_DEGREE
-	var outer: float = (ring[1][1] - Ping360.DEFAULT_HOME_LAT) * Ping360.METRES_PER_DEGREE
-	_check(
-		"merged map cell spans its run",
-		absf(inner - 2 * depth) < 0.02 and absf(outer - 4 * depth) < 0.02,
-		"%.3f m to %.3f m" % [inner, outer]
+
+
+# North and east, in m, of corner `corner` of `corners` from the first
+static func _offset(corners: PackedFloat64Array, corner: int) -> Vector2:
+	var north := (corners[corner * 2 + 1] - corners[1]) * Ping360.METRES_PER_DEGREE
+	var east := (
+		(corners[corner * 2] - corners[0])
+		* Ping360.METRES_PER_DEGREE
+		* cos(deg_to_rad(Ping360.DEFAULT_HOME_LAT))
 	)
-	sonar.draw_empty = false
-	cells = sonar.wedge_cells(bins, 0)
-	_check(
-		"no cells for the weakest level without draw_empty",
-		cells.size() == 4,
-		"%d cells" % cells.size()
-	)
-	sonar.draw_empty = true
-	sonar.display_bins = display_bins
-	sonar.transform = Transform3D.IDENTITY
+	return Vector2(north, east)
 
 
 func _check_record() -> void:
@@ -299,91 +311,112 @@ func _check_pose() -> void:
 	sonar.transform = Transform3D.IDENTITY
 
 
-func _check_chunks() -> void:
+# The map made, emptied, cleared and removed as Cockpit takes it, the log kept through a clear
+func _check_map_commands() -> void:
 	var posted: Array[Dictionary] = []
 	sonar.poster = func(message: Dictionary) -> void: posted.append(message)
-	sonar.max_map_cells = 40
-	sonar.map_chunks = 4
-	var capacity := 10
-	sonar.clear_map()
-	var cells: Array[Dictionary] = []
-	for n in 7:
-		cells.append({"type": "Feature", "n": n})
-	var batches := 25
-	for batch in batches:
-		sonar.add_map_cells(cells)
-		sonar.flush_map()
-
-	# what Cockpit would make of the messages, which refuses an append to an overlay it hasn't got
-	var on_map := {}
-	var last_append := {}
-	var problems := []
-	var sets := 0
-	var id_pattern := RegEx.create_from_string("^[a-z0-9]+(-[a-z0-9]+)*$")
-	for index in posted.size():
-		var message := posted[index]
-		var id: String = message.overlay.id if message.has("overlay") else message.id
-		if id_pattern.search(id) == null:
-			problems.append("bad id %s" % id)
-		if message.type == "cockpit:setMapOverlay":
-			if on_map.get(id, 0) > 0:
-				# a chunk is only reused for the oldest cells on the map
-				for other: String in on_map:
-					if on_map[other] > 0 and last_append[other] < last_append[id]:
-						problems.append("%d: emptied %s before %s" % [index, id, other])
-			on_map[id] = message.overlay.geojson.features.size()
-			sets += 1
-		elif not on_map.has(id):
-			problems.append("%d: append to %s before setting it" % [index, id])
-		else:
-			on_map[id] += message.features.size()
-			last_append[id] = index
-			if on_map[id] > capacity:
-				problems.append("%d: %s holds %d cells" % [index, id, on_map[id]])
-	var total := 0
-	for id: String in on_map:
-		total += on_map[id]
-	var refills := ceili(batches * cells.size() / float(capacity)) - sonar.map_chunks
+	sonar.range_m = 30
+	sonar.start_map()
+	var types := posted.map(func(message: Dictionary) -> String: return message.type)
+	var mesh: Dictionary = posted[0].mesh
 	_check(
-		"map chunks: oldest emptied before reuse, never appended to before set",
-		problems.is_empty() and sets == sonar.map_chunks + refills,
-		"%d sets, %s" % [sets, problems]
-	)
-	var stats := sonar.stats()
-	_check(
-		"map holds the newest cells",
+		"map start: setMapMesh, then clearMapMesh, as the spike's schema has them",
 		(
-			total == stats.mapCells
-			and total <= sonar.max_map_cells
-			and total > sonar.max_map_cells - capacity
-			and stats.sentFeatures == batches * cells.size()
+			types == ["cockpit:setMapMesh", "cockpit:clearMapMesh"]
+			and mesh.id == "bluesim-ping360-map"
+			and mesh.capacity == 4096
+			and mesh.texels == {"format": "r8", "width": 200, "height": 1}
+			and mesh.filter == "linear"
+			and (mesh.palette as PackedByteArray).size() == 1024
+			and mesh.opacity == Ping360.MAP_OPACITY
 		),
-		"%d on the map, %s" % [total, on_map]
+		str(types)
 	)
-
-	posted.clear()
+	var levels := PackedByteArray()
+	levels.resize(sonar.samples)
+	levels.fill(200)
+	sonar.log_cap = 50
+	sonar.clear_log()
+	for n in 3:
+		sonar.log_ping(sonar.ping_record(levels, n, n, sonar.pose()), levels)
+		sonar.map_ping(levels, n)
+	sonar.map_mesh.flush()
 	sonar.command({"type": "bluesim:ping360", "command": "clear"})
-	var emptied := posted.filter(
-		func(message: Dictionary) -> bool:
-			return (
-				message.type == "cockpit:setMapOverlay"
-				and message.overlay.geojson.features.is_empty()
-			)
-	)
-	sonar.add_map_cells(cells)
-	sonar.flush_map()
+	sonar.map_ping(levels, 3)
+	sonar.map_mesh.flush()
+	var model := Model.new()
+	var problems := model.apply_all(posted)
 	_check(
-		"clear command empties every chunk and restarts at the first",
+		"clear command empties the map and restarts its ring, keeping the log",
 		(
-			emptied.size() == sonar.map_chunks
-			and posted.size() == sonar.map_chunks + 1
-			and posted[-1].id == "bluesim-ping360-map-0"
-			and sonar.stats().mapCells == cells.size()
+			problems.is_empty()
+			and posted[-2].type == "cockpit:clearMapMesh"
+			and posted[-1].first == 0
+			and model.slot_texels(Ping360.MAP_ID).keys() == [0]
+			and sonar.stats().logPings == 3
 		),
-		str(posted.map(func(message: Dictionary) -> String: return message.type))
+		"%s %s" % [problems, posted.map(func(message: Dictionary) -> String: return message.type)]
 	)
-	sonar.max_map_cells = 40000
-	sonar.clear_map()
+	# BlueSim reloaded in the same Cockpit: made again and emptied, the old pings gone
+	sonar.start_map()
+	model.apply_all(posted)
+	sonar.stop_map()
+	model.apply_all(posted.slice(-1))
+	_check(
+		"map start again empties Cockpit's copy, stop removes it",
+		(
+			model.problems.is_empty()
+			and posted[-1] == {"type": "cockpit:removeMapMesh", "id": Ping360.MAP_ID}
+			and model.meshes.is_empty()
+			and sonar.map_mesh == null
+		),
+		str(model.problems)
+	)
+	sonar.command({"type": "bluesim:ping360", "command": "clear"})
+	_check("clear with the sonar off sends nothing", posted[-1].type == "cockpit:removeMapMesh", "")
+	sonar.log_cap = 50000
+
+
+# More pings than the map holds: the oldest slots rewritten, never a write past the ring's end
+func _check_ring() -> void:
+	var posted: Array[Dictionary] = []
+	sonar.poster = func(message: Dictionary) -> void: posted.append(message)
+	sonar.range_m = 30
+	sonar.map_history_s = 10
+	sonar.start_map()
+	var capacity: int = sonar.map_mesh.capacity
+	var levels := PackedByteArray()
+	levels.resize(sonar.samples)
+	for n in capacity + 10:
+		levels.fill(n % 256)
+		sonar.map_ping(levels, n % Ping360.GRADIANS)
+		if n % 7 == 6:
+			sonar.map_mesh.flush()
+	sonar.map_mesh.flush()
+	var model := Model.new()
+	var problems := model.apply_all(posted)
+	var held := model.slot_texels(Ping360.MAP_ID)
+	var newest := true
+	for slot in 10:
+		newest = newest and held[slot][100] == (capacity + slot) % 256
+	var largest := 0
+	for message in posted:
+		if message.has("corners"):
+			largest = maxi(largest, message.corners.size() / 8)
+	_check(
+		"ring wraps: %d slots hold the newest pings" % capacity,
+		(
+			problems.is_empty()
+			and capacity == Ping360.MIN_MAP_CAPACITY
+			and held.size() == capacity
+			and newest
+			and held[10][100] == 10
+			and largest <= 7
+		),
+		str(problems)
+	)
+	sonar.stop_map()
+	sonar.map_history_s = 210
 
 
 func _check_log() -> void:
@@ -432,7 +465,7 @@ func _check_log() -> void:
 	sonar.log_cap = 50000
 
 
-# A whole turn with the floor and both walls in range, published and logged as in Cockpit
+# A whole turn with the floor and both walls in range, mapped and logged as in Cockpit
 func _check_turn(north: Basis) -> void:
 	var posted: Array[Dictionary] = []
 	sonar.poster = func(message: Dictionary) -> void: posted.append(message)
@@ -440,46 +473,68 @@ func _check_turn(north: Basis) -> void:
 	sonar.range_m = 30
 	sonar.noise_floor = 0.03
 	sonar.head_angle = 0
-	sonar.clear_map()
+	sonar.start_map()
 	var before := sonar.stats()
+	var period := sonar.ping_period()
+	var started := Time.get_ticks_usec()
 	for n in Ping360.GRADIANS:
-		sonar.ping(n * sonar.ping_period())
-		if n % 4 == 3:
-			sonar.flush_map()
+		sonar.ping(n * period)
+		sonar.map_mesh.tick(period)
+	var elapsed := Time.get_ticks_usec() - started
 	var stats := sonar.stats()
-	var sent: int = stats.sentFeatures - before.sentFeatures
-	var sent_bytes: int = stats.sentBytes - before.sentBytes
+	var map: Dictionary = stats.map
+	var writes := posted.filter(
+		func(message: Dictionary) -> bool: return message.type == "cockpit:setMapMeshQuads"
+	)
+	var typed := 0
+	var json := 0
+	for message in writes:
+		var sizes := Ping360.MapMesh.message_bytes(message)
+		typed += sizes.x
+		json += sizes.y
+	var model := Model.new()
+	var problems := model.apply_all(posted)
+	# the wall 8 m north, in the ping at head 0
+	var wall_bin := roundi(WALL_NORTH / sonar.range_m * sonar.samples)
+	var wall: PackedByteArray = model.slot_texels(Ping360.MAP_ID)[0].slice(
+		wall_bin - 3, wall_bin + 4
+	)
 	var log_json := JSON.stringify(sonar.ping_log()).length()
 	_check(
 		"a turn mapped and logged",
 		(
-			stats.revolutions == before.revolutions + 1
+			problems.is_empty()
+			and stats.revolutions == before.revolutions + 1
 			and stats.logPings == Ping360.GRADIANS
-			and stats.mapCells == sent
-			and stats.avgCellsPerPing >= 1
+			and map.slotsWritten == Ping360.GRADIANS
+			and writes.size() == Ping360.GRADIANS
+			and Array(wall).max() > 200
+			and absi(stats.pingBytesMeshTyped - typed / writes.size()) <= 4
 			and stats.pingBytesBinary == Ping360.RECORD_KEYS.size() * 4 + sonar.samples
 		),
 		(
 			(
-				"%d cells (%.1f a ping, %d last), %d bytes posted (%.0f a cell, %.0f a ping);"
-				+ " per ping: float JSON %d, quantized JSON %d, binary %d, exported log JSON %.0f;"
-				+ " log %d bytes"
+				"%d messages, %d pings in %d ms (scan and map); posted per ping: %.0f bytes"
+				+ " typed, %.0f as base64 JSON; per ping elsewhere: float JSON %d, quantized"
+				+ " JSON %d, binary %d, exported log JSON %.0f; log %d bytes; wall %s %s"
 			)
 			% [
-				sent,
-				stats.avgCellsPerPing,
-				stats.cellsLastPing,
-				sent_bytes,
-				float(sent_bytes) / sent,
-				float(sent_bytes) / Ping360.GRADIANS,
+				writes.size(),
+				Ping360.GRADIANS,
+				elapsed / 1000,
+				float(typed) / Ping360.GRADIANS,
+				float(json) / Ping360.GRADIANS,
 				stats.pingBytesFloatJson,
 				stats.pingBytesQuantJson,
 				stats.pingBytesBinary,
 				float(log_json) / Ping360.GRADIANS,
 				stats.logBytes,
+				wall,
+				problems,
 			]
 		)
 	)
+	sonar.stop_map()
 	sonar.transform = Transform3D.IDENTITY
 
 
