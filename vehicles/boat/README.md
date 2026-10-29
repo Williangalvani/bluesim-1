@@ -16,6 +16,10 @@ the 5.9 m white centre-console of v2-v10; the v10 hull is kept off-repo as a bac
 | `boat_anchor.gd` | ground tackle (`GroundTackle` child in `boat.tscn`): anchor on the seabed ahead of the bow, chain up to the bow eye, pins the boat's horizontal position |
 | `boat_demo.tscn` / `.gd` | the sea level (baselevel + reef pack) with its boat astern of the ROV; `-- --boat-shot=/path/prefix` saves screenshots (views framed for the 4 m boat; prints the draft) |
 
+In the game, `levels/baselevel.tscn` has a `Boat` astern of where the ROV starts, its `TetherAnchor` 5 m behind the
+vehicle, so the spool tether pays out from it; `baselevel.gd` drops it for the pool level and the tether benches, which
+place their own (`rope/spool_bench.gd` puts its `TetherAnchor` `boat_at` m astern, reading the marker's position from `boat.tscn`).
+
 Materials: `boat_hull` (white gelcoat outside, white non-skid bow pads), `boat_liner` (light grey interior,
 gunwale caps, bench), `boat_black` (floor mat, rub rail, clamp blocks,
 rod holders, tiller, spool frame and flanges), `boat_metal` (aluminium rails, brackets, roller cheeks),

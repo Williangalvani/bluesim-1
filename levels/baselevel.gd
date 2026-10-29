@@ -4,9 +4,19 @@ extends Control
 const SUN_SHADOW_DISTANCE = 30
 const LEVEL_GOD_RAYS = preload("res://scripts/fx/level_god_rays.gdshader")
 
+func _enter_tree():
+	_choose_level()
+	# the support boat (vehicles/boat) sits 5 m astern of where the vehicle starts, the tether paid out from its
+	# TetherAnchor and its anchor on the seabed ahead of the bow; the benches place their own, and the pool has no room
+	var boat = get_node_or_null("ViewportCamera/SubViewport/Boat")
+	if boat and (_tether_bench_requested() or _tether_bench_requested("spoolbench") or Globals.active_level == "res://levels/pool.tscn"):
+		boat.get_parent().remove_child(boat)
+		boat.free()
+
+
 # the web build boots straight into this scene, so the page URL picks the level the menu would; this runs before
 # the vehicle's _ready, which only connects to the autopilot once it is the active vehicle, and before Globals' _ready
-func _enter_tree():
+func _choose_level():
 	# tether benchmark (rope/tether_bench.gd) run natively: boot the reef like the web build, with no autopilot link
 	if not OS.has_feature("web") and ("tetherbench" in OS.get_cmdline_user_args() or "spoolbench" in OS.get_cmdline_user_args()) and not Globals.active_level:
 		Globals.active_vehicle = "bench"
