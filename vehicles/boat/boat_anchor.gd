@@ -93,7 +93,7 @@ func _physics_process(delta):
 	var yaw := deg_to_rad(swing_degrees) * sin(TAU * _time / swing_period) if swing_degrees > 0.0 else 0.0
 	var rot := Basis(Vector3.UP, yaw)
 	var p := anchor_point + rot * _base_offset
-	var b := _boat.global_transform
+	var b: Transform3D = _boat.pose if "pose" in _boat else _boat.global_transform
 	if yaw != 0.0:
 		b.basis = rot * b.basis
 	b.origin.x = p.x
