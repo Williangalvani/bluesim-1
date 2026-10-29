@@ -282,7 +282,7 @@ func _add_boat():
 	var boat = load("res://vehicles/boat/boat.tscn").instantiate()
 	boat.name = "Boat"
 	var back = _p("boat_at", 5.0)
-	var anchor_local = Vector3(0.6, 0.12, 3.06)
+	var anchor_local: Vector3 = boat.get_node("TetherAnchor").position
 	var basis = Basis.looking_at(fwd0, Vector3.UP)  # -Z (the bow) along fwd0... then turn it round: stern to the vehicle
 	basis = basis.rotated(Vector3.UP, PI)
 	var at = start - fwd0 * back - basis * anchor_local
@@ -1206,7 +1206,7 @@ func _place_camera():
 				var sd = lead.cross(Vector3.UP)
 				match cam_mode:
 					"anchor_above":
-						# off the bow, just above the water: the bow roller and the chain going in
+						# off the bow, just above the water: the bow eye and the chain going in
 						cam.global_position = bow + lead * 2.2 + sd * 3.2 + Vector3.UP * 0.6
 						cam.global_position.y = max(cam.global_position.y, surface + 0.35)
 						cam.look_at(bow + lead * 0.6 + Vector3.DOWN * 0.35, Vector3.UP)

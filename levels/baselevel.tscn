@@ -380,7 +380,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.53995, 0, 0)
 script = ExtResource("5_ka5gl")
 
 [node name="Boat" parent="ViewportCamera/SubViewport" instance=ExtResource("10_boat")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -8.06, 3.53, 0.6)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -7.16, 3.53, 0.25)
 
 [node name="water" type="MeshInstance3D" parent="ViewportCamera/SubViewport"]
 transform = Transform3D(30, -2.62268e-06, -2.62268e-06, -2.62268e-06, -30, -1.04636e-14, -2.62268e-06, 2.39746e-13, -30, 0, 3.53, 0)

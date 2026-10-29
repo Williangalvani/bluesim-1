@@ -1,22 +1,25 @@
 extends Node3D
-## The boat's ground tackle: an anchor on the seabed ahead of the bow and its chain up to the bow roller.
+## The boat's ground tackle: an anchor on the seabed ahead of the bow and its chain up to the bow
+## eye.
 ##
-## Child of the boat (boat.tscn). At start it looks for the seabed under a point `scope` x depth ahead of the bow
-## (a ray down, excluding the boat), lays the anchor there, and from then on keeps the boat's horizontal position
-## and heading fixed relative to it: boat_float.gd still makes the boat heave, pitch and roll, but it does not
-## drift, so the TetherAnchor's topside end stays put. swing_degrees > 0 lets it yaw slowly round the anchor
-## (the bow stays on the chain's lead), which moves the tether's end by about the boat length x the swing.
-## Light for the web build: the anchor is one procedural mesh (148 triangles), the chain one MultiMesh of
-## low-poly links along a catenary that is computed once (it is redrawn only while swinging). No rigid bodies,
-## but one static collider (layer 1): capsules along the chain and a sphere at the anchor, so the tether rests
-## on the chain and the ROV bumps into it.
+## Child of the boat (boat.tscn). At start it looks for the seabed under a point `scope` x depth
+## ahead of the bow (a ray down, excluding the boat), lays the anchor there, and from then on keeps
+## the boat's horizontal position and heading fixed relative to it: boat_float.gd still makes the
+## boat heave, pitch and roll, but it does not drift, so the TetherAnchor's topside end stays put.
+## swing_degrees > 0 lets it yaw slowly round the anchor (the bow stays on the chain's lead), which
+## moves the tether's end by about the boat length x the swing.
+## Light for the web build: the anchor is one procedural mesh (148 triangles), the chain one
+## MultiMesh of low-poly links along a catenary that is computed once (it is redrawn only while
+## swinging). No rigid bodies, but one static collider (layer 1): capsules along the chain and a
+## sphere at the anchor, so the tether rests on the chain and the ROV bumps into it.
 
 @export var scope := 3.0  ## horizontal distance to the anchor, in water depths
 @export var max_depth := 60.0  ## m; no seabed found within this: the anchor is laid this deep
-@export var fairlead := Vector3(0.0, 1.0, -2.88)  ## bow roller, boat frame
+@export var fairlead := Vector3(0.0, 0.52, -2.03)  ## bow eye on the stem, boat frame
 @export var link_length := 0.22  ## m, one chain link (drawn alternately rotated 90 degrees)
 @export var max_links := 400
-@export var chain_on_seabed := 0.3  ## share of the horizontal run lying on the seabed before it lifts
+## share of the horizontal run lying on the seabed before it lifts
+@export var chain_on_seabed := 0.3
 @export var swing_degrees := 0.0  ## yaw swing round the anchor; 0 = the boat holds its heading too
 @export var swing_period := 90.0  ## s
 @export var anchor_scale := 1.0
@@ -72,7 +75,9 @@ func _lay_anchor():
 
 func _seabed_depth(at: Vector3, surface: float) -> float:
 	var space := get_world_3d().direct_space_state
-	var q := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.DOWN * max_depth)
+	var q := PhysicsRayQueryParameters3D.create(
+		at + Vector3.UP * 0.5, at + Vector3.DOWN * max_depth
+	)
 	var excl := [_boat.get_rid()] if _boat is CollisionObject3D else []
 	for v in get_tree().get_nodes_in_group("vehicles"):
 		if v is CollisionObject3D:
@@ -88,9 +93,11 @@ func _physics_process(delta):
 	if not anchor_point.is_finite():
 		return
 	_time += delta
-	# boat_float.gd (the parent, so earlier this tick) set heave/pitch/roll about its fixed heading; this pins the
-	# horizontal position, and swings it round the anchor if asked
-	var yaw := deg_to_rad(swing_degrees) * sin(TAU * _time / swing_period) if swing_degrees > 0.0 else 0.0
+	# boat_float.gd (the parent, so earlier this tick) set heave/pitch/roll about its fixed heading;
+	# this pins the horizontal position, and swings it round the anchor if asked
+	var yaw := (
+		deg_to_rad(swing_degrees) * sin(TAU * _time / swing_period) if swing_degrees > 0.0 else 0.0
+	)
 	var rot := Basis(Vector3.UP, yaw)
 	var p := anchor_point + rot * _base_offset
 	var b: Transform3D = _boat.pose if "pose" in _boat else _boat.global_transform
@@ -104,26 +111,26 @@ func _physics_process(delta):
 
 
 func _place():
-	# the chain's catenary from the bow roller to the anchor
+	# the chain's catenary from the bow eye to the anchor
 	var top := _boat.global_transform * fairlead
 	var bot := anchor_point
 	var hdir := Vector3(top.x - bot.x, 0, top.z - bot.z)
 	var span := hdir.length()
 	hdir = hdir / span if span > 1e-3 else Vector3.FORWARD
 	var lying := span * clampf(chain_on_seabed, 0.0, 0.9)
-	var X := span - lying  # horizontal run of the hanging part
-	var H := top.y - bot.y
-	# y = a (cosh(x / a) - 1) through (X, H): bisection on a
+	var run := span - lying  # horizontal run of the hanging part
+	var rise := top.y - bot.y
+	# y = a (cosh(x / a) - 1) through (run, rise): bisection on a
 	var lo := 0.01
 	var hi := 1000.0
 	for k in range(60):
 		var am := 0.5 * (lo + hi)
-		if am * (cosh(X / am) - 1.0) > H:
+		if am * (cosh(run / am) - 1.0) > rise:
 			lo = am
 		else:
 			hi = am
 	var a := 0.5 * (lo + hi)
-	var hang_len := a * sinh(X / a)
+	var hang_len := a * sinh(run / a)
 	var total := lying + hang_len
 	var n := mini(int(total / link_length), max_links)
 	var mm := _chain.multimesh
@@ -141,9 +148,13 @@ func _place():
 		mm.set_instance_transform(i, Transform3D(bas, pos))
 	# the anchor lies on the seabed, its shank along the chain's lead
 	var y := hdir
-	_anchor_mesh.global_transform = Transform3D(Basis(Vector3.UP.cross(y).normalized(), Vector3.UP, -y).scaled(Vector3.ONE * anchor_scale), bot)
+	_anchor_mesh.global_transform = Transform3D(
+		Basis(Vector3.UP.cross(y).normalized(), Vector3.UP, -y).scaled(Vector3.ONE * anchor_scale),
+		bot
+	)
 	if _collider:
-		# capsules over equal arc-length slices, local Y along each slice's chord (this node is at the world origin)
+		# capsules over equal arc-length slices, local Y along each slice's chord (this node is at
+		# the world origin)
 		var nc := _capsules.size()
 		for i in range(nc):
 			var p0 := _chain_at(total * i / nc, bot, hdir, lying, a)
@@ -157,7 +168,9 @@ func _place():
 			(cs.shape as CapsuleShape3D).height = l + 2.0 * chain_radius
 			cs.transform = Transform3D(Basis(cx, cy, cx.cross(cy)), 0.5 * (p0 + p1))
 		# the sphere round the shank and crown, half sunk in the seabed
-		_anchor_shape.position = bot + hdir * (0.45 * anchor_scale) + Vector3.UP * (anchor_radius * 0.5)
+		_anchor_shape.position = (
+			bot + hdir * (0.45 * anchor_scale) + Vector3.UP * (anchor_radius * 0.5)
+		)
 
 
 func _chain_at(s: float, bot: Vector3, hdir: Vector3, lying: float, a: float) -> Vector3:
@@ -201,7 +214,8 @@ func _build_chain():
 	_chain = MultiMeshInstance3D.new()
 	_chain.name = "Chain"
 	_chain.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var link := TorusMesh.new()  # an oval would be closer; a squashed low-poly torus reads as chain at these sizes
+	# an oval would be closer; a squashed low-poly torus reads as chain at these sizes
+	var link := TorusMesh.new()
 	link.inner_radius = link_length * 0.22
 	link.outer_radius = link_length * 0.36
 	link.rings = 6
@@ -229,8 +243,8 @@ func _stretched(m: Mesh) -> ArrayMesh:
 
 
 func _build_anchor_mesh():
-	# a stockless (navy) anchor, ~1 m: shank, crown, two flukes and a shackle ring; anchor frame: y up, -z along
-	# the shank towards the ring (the chain), origin at the crown on the seabed
+	# a stockless (navy) anchor, ~1 m: shank, crown, two flukes and a shackle ring; anchor frame:
+	# y up, -z along the shank towards the ring (the chain), origin at the crown on the seabed
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	_box(st, Vector3(0, 0.07, -0.45), Vector3(0.05, 0.05, 0.45))  # shank
@@ -278,7 +292,9 @@ func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3):
 func _box(st: SurfaceTool, c: Vector3, h: Vector3):
 	var p := []
 	for i in range(8):
-		p.append(c + Vector3(h.x if i & 1 else -h.x, h.y if i & 2 else -h.y, h.z if i & 4 else -h.z))
+		p.append(
+			c + Vector3(h.x if i & 1 else -h.x, h.y if i & 2 else -h.y, h.z if i & 4 else -h.z)
+		)
 	for f in [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]:
 		_quad(st, p[f[0]], p[f[1]], p[f[2]], p[f[3]])
 
