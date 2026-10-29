@@ -1,0 +1,36 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://vehicles/boat/boat_float.gd" id="1_float"]
+[ext_resource type="PackedScene" path="res://vehicles/boat/boat.glb" id="2_model"]
+[ext_resource type="PackedScene" path="res://vehicles/boat/pilot.glb" id="3_pilot"]
+[ext_resource type="Script" path="res://vehicles/boat/boat_anchor.gd" id="4_anchor"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hull"]
+size = Vector3(1.45, 0.88, 4.05)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_console"]
+size = Vector3(1.04, 0.3, 0.2)
+
+[node name="Boat" type="AnimatableBody3D" groups=["boats"]]
+script = ExtResource("1_float")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="HullCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, 0)
+shape = SubResource("BoxShape3D_hull")
+
+[node name="ConsoleCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -0.88)
+shape = SubResource("BoxShape3D_console")
+
+[node name="TetherAnchor" type="Marker3D" parent="." groups=["tether_anchors"]]
+transform = Transform3D(1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0.25, 0.12, 2.16)
+gizmo_extents = 0.4
+
+[node name="Pilot" parent="." instance=ExtResource("3_pilot")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.18, 0.114, -0.15)
+
+[node name="GroundTackle" type="Node3D" parent="."]
+script = ExtResource("4_anchor")
+fairlead = Vector3(0, 0.52, -2.03)
