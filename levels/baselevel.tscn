@@ -1,12 +1,9 @@
-[gd_scene load_steps=17 format=3 uid="uid://clbt7xl26oubb"]
+[gd_scene load_steps=13 format=3 uid="uid://clbt7xl26oubb"]
 
-[ext_resource type="Environment" uid="uid://grpxs1w3f4ke" path="res://scenery/defaultEnvironment.tres" id="1"]
 [ext_resource type="Script" path="res://scripts/settings.gd" id="2"]
-[ext_resource type="Script" path="res://scripts/Ping360Viewport.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/InterpolatedCamera.gd" id="4"]
 [ext_resource type="Script" path="res://scripts/targetPos.gd" id="5"]
 [ext_resource type="Script" path="res://rope/spool_tether.gd" id="5_ka5gl"]
-[ext_resource type="Shader" path="res://vehicles/components/ping360.gdshader" id="6"]
 [ext_resource type="Script" path="res://levels/baselevel.gd" id="7"]
 [ext_resource type="Material" uid="uid://cqgrgysdqshgm" path="res://scenery/shaders/underwater.tres" id="7_fte2l"]
 [ext_resource type="PackedScene" uid="uid://d0rv01klybh31" path="res://vehicles/bluerovheavy/BlueRovHeavy.tscn" id="9"]
@@ -299,9 +296,6 @@ func _process(delta):
 
 "
 
-[sub_resource type="ShaderMaterial" id="5"]
-shader = ExtResource("6")
-
 [node name="Node2D" type="Control"]
 process_mode = 3
 show_behind_parent = true
@@ -489,39 +483,6 @@ transform = Transform3D(-0.998367, -1.8596e-09, 0.0571282, 0.0271268, 0.880072, 
 current = true
 script = SubResource("4")
 
-[node name="Ping360Viewport" type="SubViewportContainer" parent="."]
-process_mode = 1
-visible = false
-material = SubResource("5")
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -303.0
-offset_top = -273.0
-offset_right = -7.0
-offset_bottom = -8.0
-grow_horizontal = 0
-grow_vertical = 0
-size_flags_horizontal = 3
-size_flags_vertical = 3
-stretch = true
-script = ExtResource("3")
-
-[node name="SubViewport" type="SubViewport" parent="Ping360Viewport"]
-handle_input_locally = false
-size = Vector2i(296, 265)
-render_target_update_mode = 0
-
-[node name="Camera3D" type="Camera3D" parent="Ping360Viewport/SubViewport" groups=["cameras"]]
-transform = Transform3D(-0.995028, 0, 0.0995974, 0, 1, 0, -0.0995974, 0, -0.995028, -1.54154, 7.13712, -2.96935)
-cull_mask = 3
-environment = ExtResource("1")
-current = true
-script = ExtResource("4")
-
 [node name="ReferenceRect" type="ReferenceRect" parent="."]
 visible = false
 custom_minimum_size = Vector2(1024, 600)
@@ -533,5 +494,5 @@ offset_top = 1.36038
 offset_right = 1.36035
 offset_bottom = 1.36035
 
-[connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/Ping360Toggle" to="Ping360Viewport" method="_on_Ping360Toggle_toggled"]
+[connection signal="toggled" from="ViewportCamera/SettingsPanel/VBoxContainer/Ping360Toggle" to="ViewportCamera/SettingsPanel" method="_on_Ping360Toggle_toggled"]
 [connection signal="value_changed" from="ViewportCamera/SettingsPanel/VBoxContainer/physicsRateSlider" to="ViewportCamera/SettingsPanel" method="_on_HSlider_value_changed"]

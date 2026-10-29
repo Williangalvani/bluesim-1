@@ -1,6 +1,5 @@
 extends MeshInstance3D
 
-signal updatePing360Display
 var last_points = [[0, 0], [0, 0], [0, 0]]
 var max_distance = 400
 var n_offsets = 40
@@ -69,5 +68,4 @@ func _process(_delta):
 	if not Globals.ping360_enabled:
 		return
 	print("process")
-	emit_signal("updatePing360Display", angle, last_points)
 	angle = (angle + 1) % 360
