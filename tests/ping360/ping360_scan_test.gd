@@ -138,6 +138,9 @@ func _check_map(north: Basis) -> void:
 	var levels := PackedByteArray()
 	for b in sonar.samples:
 		levels.append(b + 50)
+	levels[100] = 0
+	levels[sonar.samples - 1] = 255
+	var sent := levels.duplicate()
 	var quad := sonar.ping_quad(levels, 0)
 	var corners: PackedFloat64Array = quad.corners
 	var transducer := Ping360.world_to_lonlat_exact(origin, sonar.home_lat, sonar.home_lon)
@@ -174,46 +177,64 @@ func _check_map(north: Basis) -> void:
 	_check("map quad, head 0 facing east", absf(rad_to_deg(atan2(a.y, a.x)) - 90) < 1, str(a))
 	var texels: PackedByteArray = quad.texels
 	var blanked := ceili(sonar.map_blank_m / sonar.range_m * sonar.samples)
+	var indexed := true
+	for bin in range(blanked, sonar.samples):
+		indexed = indexed and texels[bin] == Ping360.map_index(levels[bin])
 	_check(
-		"map quad uv runs 0 to the bins along the range, the bins as its texels, ringdown blanked",
+		"map quad uv runs 0 to the bins along the range, the bins' map indices its texels, ringdown 0",
 		(
 			quad.uv == PackedFloat32Array([0, 0.5, 0, 0.5, 200, 0.5, 200, 0.5])
 			and texels.size() == sonar.samples
+			and blanked > 0
 			and texels.slice(0, blanked).count(0) == blanked
-			and texels.slice(blanked) == levels.slice(blanked)
-			and levels[0] == 50
+			and indexed
+			and Array(texels.slice(blanked)).min() == 1
+			and texels[100] == 1
+			and texels[sonar.samples - 1] == 255
+			and levels == sent
+			and Marshalls.base64_to_raw(sonar.ping_record(levels, 0, 0, sonar.pose()).i) == sent
 		),
-		"%d bins blanked" % blanked
+		"%d bins blanked, texels %s" % [blanked, texels.slice(0, blanked + 3)]
+	)
+	var indices := []
+	for level in 256:
+		indices.append(Ping360.map_index(level))
+	var rising := true
+	for level in range(1, 256):
+		rising = rising and indices[level] >= indices[level - 1]
+	_check(
+		"map index: silence 1, the strongest 255, rising, 0 left for no data",
+		indices[0] == 1 and indices[255] == 255 and rising and indices.min() == 1,
+		str(indices.slice(0, 8))
 	)
 	sonar.transform = Transform3D.IDENTITY
 
 
-# The map's palette: transparent for silence and the noise, then a smooth ramp to opaque
+# The map's palette: 0, no data, transparent, and every echo strength opaque, from black for
+# silence brightening to white
 func _check_palette() -> void:
 	var palette := Ping360.map_palette()
 	var alphas := []
-	for strength in 256:
-		alphas.append(palette[strength * 4 + 3])
-	var rising := true
-	var biggest_step := 0
-	for strength in range(1, 256):
-		rising = rising and alphas[strength] >= alphas[strength - 1]
-		biggest_step = maxi(biggest_step, alphas[strength] - alphas[strength - 1])
-	var noise := ceili(sonar.noise_floor * 255)
-	var white := Ping360.sonar_colour(1)
+	var brightness := []
+	for index in 256:
+		var entry := palette.slice(index * 4, index * 4 + 4)
+		alphas.append(entry[3])
+		brightness.append(0.2126 * entry[0] + 0.7152 * entry[1] + 0.0722 * entry[2])
+	var brightening := true
+	for index in range(2, 256):
+		brightening = brightening and brightness[index] >= brightness[index - 1]
 	_check(
-		"palette: silence and noise transparent, alpha rising smoothly to opaque",
+		"palette: 0 transparent, 1..255 opaque, 1 black, brightening to white",
 		(
 			palette.size() == 1024
 			and alphas[0] == 0
-			and alphas.slice(0, noise + 1).max() == 0
-			and rising
-			and biggest_step <= 6
-			and alphas[ceili(Ping360.ALPHA_TO * 255)] == 255
-			and alphas[255] == 255
-			and palette.slice(1020, 1023) == PackedByteArray([white.r8, white.g8, white.b8])
+			and alphas.slice(1).min() == 255
+			and palette.slice(4, 8) == PackedByteArray([0, 0, 0, 255])
+			and brightening
+			and brightness[255] > brightness[1]
+			and palette.slice(1020, 1024) == PackedByteArray([255, 255, 255, 255])
 		),
-		"alpha %s, biggest step %d" % [alphas.slice(0, 100, 8), biggest_step]
+		"index 0..2 %s, brightness %s" % [palette.slice(0, 12), brightness.slice(1, 256, 32)]
 	)
 
 
@@ -400,7 +421,7 @@ func _check_ring() -> void:
 	var held := model.slot_texels(Ping360.MAP_ID)
 	var newest := true
 	for slot in 10:
-		newest = newest and held[slot][100] == (capacity + slot) % 256
+		newest = newest and held[slot][100] == Ping360.map_index((capacity + slot) % 256)
 	var largest := 0
 	for message in posted:
 		if message.has("corners"):
@@ -412,7 +433,7 @@ func _check_ring() -> void:
 			and capacity == Ping360.MIN_MAP_CAPACITY
 			and held.size() == capacity
 			and newest
-			and held[10][100] == 10
+			and held[10][100] == Ping360.map_index(10)
 			and largest <= 7
 		),
 		str(problems)
@@ -502,6 +523,19 @@ func _check_turn(north: Basis) -> void:
 		wall_bin - 3, wall_bin + 4
 	)
 	var log_json := JSON.stringify(sonar.ping_log()).length()
+	var logged := Marshalls.base64_to_raw(sonar.ping_log().pings[0].i)
+	var mapped: PackedByteArray = model.slot_texels(Ping360.MAP_ID)[0]
+	var blanked := ceili(sonar.map_blank_m / sonar.range_m * sonar.samples)
+	var silent := 0
+	var as_logged := mapped.slice(0, blanked).count(0) == blanked
+	for b in range(blanked, sonar.samples):
+		as_logged = as_logged and mapped[b] == Ping360.map_index(logged[b])
+		silent += 1 if logged[b] == 0 else 0
+	_check(
+		"a turn's first ping: raw bytes in the log, their map indices on the map, silence opaque",
+		as_logged and silent > 0 and Array(logged).max() == 255 and Array(mapped).max() == 255,
+		"%d silent bins, log %s, map %s" % [silent, logged.slice(0, 12), mapped.slice(0, 12)]
+	)
 	_check(
 		"a turn mapped and logged",
 		(

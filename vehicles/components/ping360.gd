@@ -8,8 +8,9 @@ extends MeshInstance3D
 #
 # The map is a mesh drawn by Cockpit (cockpit_map_mesh.gd sends it): each ping is one quad, a wedge
 # from the transducer out to the range carrying the ping's quantized bins, which Cockpit colours
-# through the mesh's palette. It keeps the last map_history_s of pings, the oldest overwritten by
-# the newest. The beam and the range circle are a small GeoJSON overlay (cockpit PR #3271).
+# through the mesh's palette, opaque out to the range as in Ping Viewer, black for silence, but for
+# the first map_blank_m. It keeps the last map_history_s of pings, the oldest overwritten by the
+# newest. The beam and the range circle are a small GeoJSON overlay (cockpit PR #3271).
 #
 # On the web, ?ping360 in the page URL turns it on, and ping360_range, ping360_gain, ping360_step,
 # ping360_log_cap, ping360_history_s, ping360_blank_m and ping360_encoding override range_m, gain,
@@ -56,10 +57,6 @@ const MAX_MAP_CAPACITY := 16384
 # how wide each ping's wedge is on the map, in head steps: wider than a step, so a vehicle turning
 # with the head leaves no gaps between them, and still inside the beam
 const WEDGE_STEPS := 1.5
-# echo strength from which the map's palette turns from transparent to opaque, and where it is
-# opaque, so the weakest echoes and the noise leave the seafloor imagery under them in view
-const ALPHA_FROM := 0.05
-const ALPHA_TO := 0.35
 # how mesh_encoding gets the map's arrays from Godot, which can only hand JavaScript strings, to
 # Cockpit: decoded from base64 here into typed arrays it is given, or as the base64 strings
 const TYPED := "typed"
@@ -304,15 +301,19 @@ static func sonar_colour(intensity: float) -> Color:
 	return (stops[k] as Color).lerp(stops[k + 1], x - k)
 
 
-# The map's palette: sonar_colour() for each byte of echo strength, transparent for the weakest
-# and through a smooth ramp, from ALPHA_FROM to ALPHA_TO, to opaque. 256 RGBA entries, straight
-# alpha.
+# The map texel of a byte of echo strength, 0..255 onto 1..255: 0 is left for no data
+static func map_index(level: int) -> int:
+	return 1 + roundi(level * 254 / 255.0)
+
+
+# The map's palette, 256 RGBA entries, straight alpha: 0 transparent, where there is no data, and
+# 1..255 opaque, like Ping Viewer's sonar view, black for silence and then sonar_colour() for the
+# echo strength map_index() gave them
 static func map_palette() -> PackedByteArray:
-	var palette := PackedByteArray()
-	for strength in 256:
-		var colour := sonar_colour(strength / 255.0)
-		var alpha := smoothstep(ALPHA_FROM, ALPHA_TO, strength / 255.0) if strength else 0.0
-		palette.append_array([colour.r8, colour.g8, colour.b8, roundi(alpha * 255)])
+	var palette := PackedByteArray([0, 0, 0, 0])
+	for index in range(1, 256):
+		var colour := Color.BLACK if index == 1 else sonar_colour((index - 1) / 254.0)
+		palette.append_array([colour.r8, colour.g8, colour.b8, 255])
 	return palette
 
 
@@ -410,8 +411,8 @@ func stop_map() -> void:
 # The map quad of one ping, its quantized bins `levels` at head `angle`: a wedge WEDGE_STEPS head
 # steps wide from where the transducer is, the way it is heading now, out to range_m, as corners
 # [O, O, A, B] in lon, lat, uv along the strip of bins from 0 at the transducer to samples at the
-# range, so each bin lies over its own stretch of range, and the bins, the first map_blank_m left
-# out.
+# range, so each bin lies over its own stretch of range, and the bins as map_index() texels, the
+# first map_blank_m left out as 0.
 func ping_quad(levels: PackedByteArray, angle: float) -> Dictionary:
 	var origin := global_position
 	var half := WEDGE_STEPS * angle_step / 2.0
@@ -423,10 +424,11 @@ func ping_quad(levels: PackedByteArray, angle: float) -> Dictionary:
 	corners.append_array(_lonlat_exact(origin + horizontal_direction(angle + half) * range_m))
 	var width := levels.size()
 	var uv := PackedFloat32Array([0, 0.5, 0, 0.5, width, 0.5, width, 0.5])
-	var texels := levels.duplicate()
+	var texels := PackedByteArray()
+	texels.resize(width)
 	var blanked := mini(ceili(map_blank_m / range_m * width), width)
-	for b in blanked:
-		texels[b] = 0
+	for b in range(blanked, width):
+		texels[b] = map_index(levels[b])
 	return {"corners": corners, "uv": uv, "texels": texels}
 
 
