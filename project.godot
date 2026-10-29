@@ -193,6 +193,11 @@ help={
 ]
 }
 
+[layer_names]
+
+3d_physics/layer_2="ROV"
+3d_physics/layer_8="Kelp"
+
 [physics]
 
 common/physics_ticks_per_second=100
