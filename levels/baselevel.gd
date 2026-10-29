@@ -7,6 +7,12 @@ const LEVEL_GOD_RAYS = preload("res://scripts/fx/level_god_rays.gdshader")
 # the web build boots straight into this scene, so the page URL picks the level the menu would; this runs before
 # the vehicle's _ready, which only connects to the autopilot once it is the active vehicle, and before Globals' _ready
 func _enter_tree():
+	# tether benchmark (rope/tether_bench.gd) run natively: boot the reef like the web build, with no autopilot link
+	if not OS.has_feature("web") and ("tetherbench" in OS.get_cmdline_user_args() or "spoolbench" in OS.get_cmdline_user_args()) and not Globals.active_level:
+		Globals.active_vehicle = "bench"
+		ProjectSettings.load_resource_pack("res://levels/reef.pck")
+		Globals.active_level = "res://custom_level.tscn"
+		return
 	if not OS.has_feature("web") or Globals.active_level:
 		return
 	if JavaScriptBridge.eval("new URLSearchParams(location.search).has('maptiles')"):
@@ -32,6 +38,10 @@ func _ready():
 		sun.directional_shadow_max_distance = min(sun.directional_shadow_max_distance, SUN_SHADOW_DISTANCE)
 	add_child(level)
 	_use_bluesim_god_rays(level)
+	if _tether_bench_requested():
+		add_child(load("res://rope/tether_bench.gd").new())
+	elif _tether_bench_requested("spoolbench"):
+		add_child(load("res://rope/spool_bench.gd").new())
 
 
 # a level's light shafts (the reef's UnderwaterFX/GodRays) start at the surface it was built with, and were drawn before
@@ -51,3 +61,9 @@ func _use_bluesim_god_rays(level: Node):
 		m.set_shader_parameter("surface_y", Globals.surface_altitude)
 		m.set_shader_parameter("floor_y", (rays.global_transform * rays.get_aabb()).position.y)
 		rays.material_override = m
+
+
+func _tether_bench_requested(key := "tetherbench") -> bool:
+	if OS.has_feature("web"):
+		return JavaScriptBridge.eval("new URLSearchParams(location.search).has('%s')" % key)
+	return key in OS.get_cmdline_user_args()
